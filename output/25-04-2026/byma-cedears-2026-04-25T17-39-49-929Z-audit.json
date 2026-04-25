@@ -1,0 +1,26 @@
+{
+  "runId": "byma-cedears-2026-04-25T17-39-49-929Z",
+  "startedAt": "2026-04-25T17:39:49.929Z",
+  "endedAt": "2026-04-25T17:39:57.167Z",
+  "duracionMs": 7238,
+  "duracionTexto": "7s",
+  "estadoMercado": "CERRADO",
+  "cierreMercadoEstimado": "25/04/2026, 05:00:00 p. m.",
+  "totalInstrumentos": 1,
+  "totalRegistros": 25,
+  "totalFallos": 0,
+  "parametros": {
+    "instrumentos": [
+      "cedears"
+    ],
+    "pais": "argentina",
+    "panel": "general",
+    "formatos": [
+      "csv"
+    ],
+    "pageSize": 25,
+    "maxPages": 1,
+    "concurrency": 5
+  },
+  "fallos": []
+}

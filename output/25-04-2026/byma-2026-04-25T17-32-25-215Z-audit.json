@@ -1,0 +1,32 @@
+{
+  "runId": "byma-2026-04-25T17-32-25-215Z",
+  "startedAt": "2026-04-25T17:32:25.215Z",
+  "endedAt": "2026-04-25T17:34:23.306Z",
+  "duracionMs": 118091,
+  "duracionTexto": "1m 58s",
+  "estadoMercado": "CERRADA",
+  "cierreMercadoEstimado": "25/04/2026, 05:00:00 p. m.",
+  "totalInstrumentos": 1,
+  "totalRegistros": 867,
+  "totalFallos": 1,
+  "parametros": {
+    "instrumentos": [
+      "cedears"
+    ],
+    "pais": "argentina",
+    "panel": "general",
+    "formatos": [
+      "csv"
+    ],
+    "pageSize": 100,
+    "maxPages": 200,
+    "concurrency": 5
+  },
+  "fallos": [
+    {
+      "instrumento": "cedears",
+      "simbolo": "BKC*",
+      "error": "Simbolo no soportado por endpoint detalle: BKC*"
+    }
+  ]
+}

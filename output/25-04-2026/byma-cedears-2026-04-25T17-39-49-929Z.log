@@ -1,0 +1,15 @@
+[2026-04-25T17:39:49.930Z] [INFO] Inicio de ejecucion
+[2026-04-25T17:39:49.931Z] [INFO] Instrumentos solicitados: cedears
+[2026-04-25T17:39:50.753Z] [INFO] Autenticacion inicial exitosa
+[2026-04-25T17:39:50.753Z] [INFO] Procesando instrumento cedears...
+[2026-04-25T17:39:53.491Z] [INFO] Descubrimiento cedears: 25 simbolos (/Cotizaciones/Cedears/argentina/Todos)
+[2026-04-25T17:39:55.340Z] [INFO] Loading cedears: 10/25 (40%)
+[2026-04-25T17:39:56.541Z] [INFO] Loading cedears: 20/25 (80%)
+[2026-04-25T17:39:57.164Z] [INFO] Loading cedears: 25/25 (100%)
+[2026-04-25T17:39:57.165Z] [INFO] Instrumento cedears: ok=25, fallos=0
+[2026-04-25T17:39:57.166Z] [INFO] CSV exportado: D:\Tools\Git repo\Other-projects\Script-IOL-excel\output\25-04-2026\byma-cedears-2026-04-25T17-39-49-929Z.csv
+[2026-04-25T17:39:57.178Z] [INFO] Auditoria exportada: D:\Tools\Git repo\Other-projects\Script-IOL-excel\output\25-04-2026\byma-cedears-2026-04-25T17-39-49-929Z-audit.json
+[2026-04-25T17:39:57.179Z] [INFO] Archivos generados: D:\Tools\Git repo\Other-projects\Script-IOL-excel\output\25-04-2026\byma-cedears-2026-04-25T17-39-49-929Z.csv | D:\Tools\Git repo\Other-projects\Script-IOL-excel\output\25-04-2026\byma-cedears-2026-04-25T17-39-49-929Z-audit.json
+[2026-04-25T17:39:57.179Z] [INFO] Ejecucion finalizada
+[2026-04-25T17:39:57.179Z] [INFO] Duracion total: 7s
+[2026-04-25T17:39:57.179Z] [INFO] Mercado: CERRADO (fin de semana). Cierre de referencia: 25/04/2026, 05:00:00 p. m.
