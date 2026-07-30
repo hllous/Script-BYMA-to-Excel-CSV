@@ -25,6 +25,7 @@
 - [Características](#-características)
 - [Requisitos](#-requisitos)
 - [Instalación](#-instalación)
+- [Configuración opcional](#️-configuración-opcional)
 - [Modo Fácil](#-modo-fácil)
 - [Modo Avanzado](#-modo-avanzado)
 - [Archivos de salida](#-archivos-de-salida)
@@ -56,6 +57,16 @@ git clone https://github.com/hllous/Script-BYMA-to-Excel-CSV.git
 cd Script-BYMA-to-Excel-CSV
 npm install
 ```
+
+### ⚙️ Configuración opcional
+
+Para no ingresar el usuario y la contraseña de IOL en cada corrida, copiá `config.local.example.json` como `config.local.json` y completá tus credenciales y valores por defecto:
+
+```bash
+cp config.local.example.json config.local.json
+```
+
+`config.local.json` está en `.gitignore` y nunca se sube al repositorio.
 
 ### 🟢 Modo Fácil (sin línea de comandos)
 
@@ -139,6 +150,7 @@ Publicado bajo la [Licencia MIT](LICENSE).
 - [Features](#-features)
 - [Requirements](#-requirements)
 - [Installation](#-installation)
+- [Optional Configuration](#️-optional-configuration)
 - [Easy Mode](#-easy-mode)
 - [Advanced Mode](#-advanced-mode)
 - [Output Files](#-output-files)
@@ -170,6 +182,16 @@ git clone https://github.com/hllous/Script-BYMA-to-Excel-CSV.git
 cd Script-BYMA-to-Excel-CSV
 npm install
 ```
+
+### ⚙️ Optional configuration
+
+To avoid entering your IOL username and password on every run, copy `config.local.example.json` to `config.local.json` and fill in your credentials and default values:
+
+```bash
+cp config.local.example.json config.local.json
+```
+
+`config.local.json` is in `.gitignore` and is never committed to the repo.
 
 ### 🟢 Easy Mode (no command line)
 
