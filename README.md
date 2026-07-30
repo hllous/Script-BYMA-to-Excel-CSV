@@ -1,7 +1,7 @@
 <a name="top"></a>
 <div align="center">
 
-# 📈 Convertidor de Cosas Económicas de BYMA a Excel y/o CSV
+# 📈 Convertidor de Cotizaciones de BYMA a Excel/CSV
 
 **Exporta cotizaciones del mercado BYMA, obtenidas a través de la API de InvertirOnline (IOL), a Excel y/o CSV.**
 
