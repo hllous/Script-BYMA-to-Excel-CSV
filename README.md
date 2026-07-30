@@ -1,16 +1,17 @@
 <a name="top"></a>
 <div align="center">
 
-# 📈 BYMA Quote Exporter (vía API de IOL)
+# 📈 Convertidor de Cosas Económicas de BYMA a Excel y/o CSV
 
-**Herramienta liviana en Node.js que exporta cotizaciones del mercado BYMA, obtenidas a través de la API de InvertirOnline (IOL), directamente a CSV y XLSX.**
+**Exporta cotizaciones del mercado BYMA, obtenidas a través de la API de InvertirOnline (IOL), a Excel y/o CSV.**
 
 ![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=node.js&logoColor=white)
 ![Platform](https://img.shields.io/badge/Platform-Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
-[![Español](https://img.shields.io/badge/🇪🇸-Español-D14836?style=for-the-badge)](#espanol)
-[![English](https://img.shields.io/badge/🇬🇧-English-0077B5?style=for-the-badge)](#english)
+<a href="#espanol"><img src="https://flagcdn.com/w40/es.png" width="28" alt="ES"> <b>Español</b></a>
+&nbsp;&nbsp;&nbsp;
+<a href="#english"><img src="https://flagcdn.com/w40/gb.png" width="28" alt="GB"> <b>English</b></a>
 
 </div>
 
@@ -19,17 +20,13 @@
 <a name="espanol"></a>
 ## 🇪🇸 Español
 
-Nada de copiar y pegar a mano desde la web del broker, ni pelear con exportaciones de Excel: apuntá a los instrumentos que te interesan (acciones, CEDEARs, bonos, ETFs, opciones y más) y obtené planillas limpias y listas para usar en segundos.
-
 ### 📑 Índice
 
 - [Características](#-características)
 - [Requisitos](#-requisitos)
 - [Instalación](#-instalación)
-- [Inicio rápido (doble click)](#-inicio-rápido-doble-click)
-- [Uso por terminal](#-uso-por-terminal)
-- [Parámetros de la CLI](#-parámetros-de-la-cli)
-- [Configuración](#-configuración)
+- [Modo Fácil](#-modo-fácil)
+- [Modo Avanzado](#-modo-avanzado)
 - [Archivos de salida](#-archivos-de-salida)
 - [Notas y limitaciones](#-notas-y-limitaciones)
 - [Licencia](#-licencia)
@@ -39,7 +36,7 @@ Nada de copiar y pegar a mano desde la web del broker, ni pelear con exportacion
 - 🔄 Obtiene cotizaciones directamente desde la **API de IOL** — sin scraping
 - 📊 Exporta a **CSV** y/o **XLSX**, incluso ambos a la vez
 - 🧩 Soporta todos los tipos de instrumentos que ofrece IOL: `acciones`, `cedears`, `letras`, `bonos`, `ons`, `fci`, `etfs`, `opciones`
-- ⚙️ Totalmente configurable vía flags de CLI o un archivo de configuración local
+- ⚙️ Totalmente configurable vía flags de CLI
 - 🚀 Descarga concurrente y paginada, con reintentos y timeouts para mayor confiabilidad
 - 🧾 Cada corrida genera un log y una auditoría en JSON junto con los datos
 - 🖱️ Flujo sin terminal disponible — con solo hacer doble click en `run.bat`
@@ -52,21 +49,26 @@ Nada de copiar y pegar a mano desde la web del broker, ni pelear con exportacion
 
 ### 🛠 Instalación
 
+Este paso es necesario tanto para el Modo Fácil como para el Modo Avanzado.
+
 ```bash
 git clone https://github.com/hllous/Script-BYMA-to-Excel-CSV.git
 cd Script-BYMA-to-Excel-CSV
 npm install
 ```
 
-### 🖱 Inicio rápido (doble click)
+### 🟢 Modo Fácil
 
-La forma más simple de correrlo, sin necesidad de terminal:
+Ideal si no estás acostumbrado a usar la terminal o no sabés programar — no hace falta escribir ningún comando.
 
-1. Hacer doble click en **`run.bat`**
-2. Ingresar usuario/contraseña de IOL cuando lo pida (se salta si ya están en `config.local.json`)
-3. Buscar los archivos generados en la carpeta **`output/`** al finalizar
+1. Hacé doble click en el archivo **`run.bat`**
+2. Cuando te lo pida, ingresá tu usuario y contraseña de IOL
+3. Esperá a que termine (tarda unos segundos, según cuántos instrumentos estés exportando)
+4. Abrí la carpeta **`output/`** — ahí vas a encontrar tus archivos CSV y/o Excel, listos para usar
 
-### 💻 Uso por terminal
+### 🔵 Modo Avanzado
+
+Para quienes prefieren trabajar por línea de comandos y personalizar la exportación con parámetros.
 
 ```bash
 npm start -- --instrumentos=all
@@ -84,7 +86,7 @@ Ver todas las opciones disponibles:
 npm run help
 ```
 
-### ⚙️ Parámetros de la CLI
+**Parámetros disponibles:**
 
 | Parámetro | Descripción | Ejemplo / Valores |
 |---|---|---|
@@ -99,35 +101,6 @@ npm run help
 | `--timeoutMs` | Timeout de request (ms) | `20000` |
 | `--retries` | Reintentos por request fallido | `3` |
 | `--interactive` | Preguntar por credenciales faltantes | `true` / `false` |
-
-### 🔧 Configuración
-
-Para evitar el prompt interactivo de credenciales, copiá el archivo de ejemplo y completá tus propios valores:
-
-```bash
-cp config.local.example.json config.local.json
-```
-
-```json
-{
-  "username": "TU_USUARIO_IOL",
-  "password": "TU_PASSWORD_IOL",
-  "apiBaseUrl": "https://api.invertironline.com/api/v2",
-  "authUrl": "https://api.invertironline.com/token",
-  "pais": "argentina",
-  "panel": "general",
-  "formatos": ["csv", "xlsx"],
-  "instrumentos": ["acciones", "cedears", "bonos"],
-  "salida": "output",
-  "pageSize": 100,
-  "maxPages": 200,
-  "concurrency": 5,
-  "timeoutMs": 20000,
-  "retries": 3
-}
-```
-
-> ⚠️ **Nota de seguridad:** `config.local.json` está listado en `.gitignore` y nunca se commitea — es intencional. Contiene tus credenciales reales de IOL, así que mantenelo así y nunca lo subas ni lo compartas.
 
 ### 📂 Archivos de salida
 
@@ -163,17 +136,13 @@ Publicado bajo la [Licencia MIT](LICENSE).
 <a name="english"></a>
 ## 🇬🇧 English
 
-No manual copy-pasting from a broker's website, no fighting with Excel exports — point it at the instruments you care about (stocks, CEDEARs, bonds, ETFs, options, and more) and get clean, ready-to-use spreadsheets in seconds.
-
 ### 📑 Table of Contents
 
 - [Features](#-features)
 - [Requirements](#-requirements)
 - [Installation](#-installation)
-- [Quick Start](#-quick-start-double-click)
-- [Usage from the Terminal](#-usage-from-the-terminal)
-- [CLI Parameters](#-cli-parameters)
-- [Configuration](#-configuration)
+- [Easy Mode](#-easy-mode)
+- [Advanced Mode](#-advanced-mode)
 - [Output Files](#-output-files)
 - [Notes & Limitations](#-notes--limitations)
 - [License](#-license)
@@ -183,7 +152,7 @@ No manual copy-pasting from a broker's website, no fighting with Excel exports �
 - 🔄 Fetches live quotes directly from the **IOL API** — no scraping involved
 - 📊 Exports to **CSV** and/or **XLSX**, simultaneously if you want
 - 🧩 Supports every instrument type IOL offers: `acciones`, `cedears`, `letras`, `bonos`, `ons`, `fci`, `etfs`, `opciones`
-- ⚙️ Fully configurable via CLI flags or a local config file
+- ⚙️ Fully configurable via CLI flags
 - 🚀 Concurrent, paginated fetching with retries and timeouts for reliability
 - 🧾 Every run produces an audit log and a JSON audit trail alongside your data
 - 🖱️ Zero-terminal workflow available — just double-click `run.bat`
@@ -196,21 +165,26 @@ No manual copy-pasting from a broker's website, no fighting with Excel exports �
 
 ### 🛠 Installation
 
+This step is required for both Easy Mode and Advanced Mode.
+
 ```bash
 git clone https://github.com/hllous/Script-BYMA-to-Excel-CSV.git
 cd Script-BYMA-to-Excel-CSV
 npm install
 ```
 
-### 🖱 Quick Start (double-click)
+### 🟢 Easy Mode
 
-The simplest way to run it, no terminal required:
+Ideal if you're not comfortable with the terminal or don't code — no commands needed.
 
-1. Double-click **`run.bat`**
-2. Enter your IOL username/password when prompted (skipped if already set in `config.local.json`)
-3. Grab your files from the **`output/`** folder once it finishes
+1. Double-click the **`run.bat`** file
+2. Enter your IOL username and password when prompted
+3. Wait for it to finish (a few seconds, depending on how many instruments you're exporting)
+4. Open the **`output/`** folder — your CSV and/or Excel files will be there, ready to use
 
-### 💻 Usage from the Terminal
+### 🔵 Advanced Mode
+
+For anyone who prefers working from the command line and customizing the export with parameters.
 
 ```bash
 npm start -- --instrumentos=all
@@ -228,7 +202,7 @@ Show all available options:
 npm run help
 ```
 
-### ⚙️ CLI Parameters
+**Available parameters:**
 
 | Parameter | Description | Example / Values |
 |---|---|---|
@@ -243,35 +217,6 @@ npm run help
 | `--timeoutMs` | Request timeout (ms) | `20000` |
 | `--retries` | Retry attempts per failed request | `3` |
 | `--interactive` | Prompt for missing credentials | `true` / `false` |
-
-### 🔧 Configuration
-
-To skip the interactive credential prompt, copy the example config and fill in your own values:
-
-```bash
-cp config.local.example.json config.local.json
-```
-
-```json
-{
-  "username": "TU_USUARIO_IOL",
-  "password": "TU_PASSWORD_IOL",
-  "apiBaseUrl": "https://api.invertironline.com/api/v2",
-  "authUrl": "https://api.invertironline.com/token",
-  "pais": "argentina",
-  "panel": "general",
-  "formatos": ["csv", "xlsx"],
-  "instrumentos": ["acciones", "cedears", "bonos"],
-  "salida": "output",
-  "pageSize": 100,
-  "maxPages": 200,
-  "concurrency": 5,
-  "timeoutMs": 20000,
-  "retries": 3
-}
-```
-
-> ⚠️ **Security note:** `config.local.json` is listed in `.gitignore` and is never committed — that's intentional. It holds your real IOL credentials, so keep it that way and never commit or share it.
 
 ### 📂 Output Files
 
