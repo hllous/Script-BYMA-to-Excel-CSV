@@ -57,18 +57,16 @@ cd Script-BYMA-to-Excel-CSV
 npm install
 ```
 
-### 🟢 Modo Fácil
+### 🟢 Modo Fácil (sin línea de comandos)
 
-Ideal si no estás acostumbrado a usar la terminal o no sabés programar — no hace falta escribir ningún comando.
+1. Hacer doble clic en el archivo **`run.bat`**
+2. Ingresar el usuario y la contraseña de IOL cuando se soliciten
+3. Esperar a que finalice el proceso (tarda unos segundos, según la cantidad de instrumentos exportados)
+4. Abrir la carpeta **`output/`**, donde quedan los archivos CSV y/o Excel generados
 
-1. Hacé doble click en el archivo **`run.bat`**
-2. Cuando te lo pida, ingresá tu usuario y contraseña de IOL
-3. Esperá a que termine (tarda unos segundos, según cuántos instrumentos estés exportando)
-4. Abrí la carpeta **`output/`** — ahí vas a encontrar tus archivos CSV y/o Excel, listos para usar
+### 🔵 Modo Avanzado (línea de comandos)
 
-### 🔵 Modo Avanzado
-
-Para quienes prefieren trabajar por línea de comandos y personalizar la exportación con parámetros.
+Para quienes prefieren trabajar desde la terminal y personalizar la exportación mediante parámetros.
 
 ```bash
 npm start -- --instrumentos=all
@@ -119,7 +117,7 @@ output/
 - El script continúa aunque haya errores en símbolos individuales — se registran en el log, no interrumpen la corrida.
 - Si un campo no aplica para un tipo de instrumento, se exporta como `null`.
 - Si IOL cambia sus endpoints o la estructura de respuesta, puede ser necesario ajustar los mapeos en `src/services`.
-- Es una **herramienta no oficial, de uso personal**, sin afiliación ni respaldo de IOL/InvertirOnline o BYMA. Usala de acuerdo a los términos de servicio de la API de IOL.
+- Es una **herramienta no oficial, de uso personal**, sin afiliación ni respaldo de IOL/InvertirOnline o BYMA. Su uso debe ajustarse a los términos de servicio de la API de IOL.
 
 ### 📄 Licencia
 
@@ -173,16 +171,14 @@ cd Script-BYMA-to-Excel-CSV
 npm install
 ```
 
-### 🟢 Easy Mode
-
-Ideal if you're not comfortable with the terminal or don't code — no commands needed.
+### 🟢 Easy Mode (no command line)
 
 1. Double-click the **`run.bat`** file
 2. Enter your IOL username and password when prompted
-3. Wait for it to finish (a few seconds, depending on how many instruments you're exporting)
-4. Open the **`output/`** folder — your CSV and/or Excel files will be there, ready to use
+3. Wait for the process to finish (a few seconds, depending on how many instruments are being exported)
+4. Open the **`output/`** folder, where the generated CSV and/or Excel files are saved
 
-### 🔵 Advanced Mode
+### 🔵 Advanced Mode (command line)
 
 For anyone who prefers working from the command line and customizing the export with parameters.
 
