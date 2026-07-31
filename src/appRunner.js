@@ -11,7 +11,7 @@ const {
 } = require("./interactiveMenu");
 const { loadLocalConfig } = require("./utils/configLoader");
 const { Logger } = require("./utils/logger");
-const { getDateInArgentina, formatDateInArgentina } = require("./utils/dateFormat");
+const { getDateInArgentina, formatDateInArgentina, formatFileTimestampInArgentina } = require("./utils/dateFormat");
 const { printHomeBanner } = require("./utils/banner");
 const { renderProgressBar } = require("./utils/progressBar");
 const { DEFAULTS, INSTRUMENT_DEFINITIONS } = require("./config/constants");
@@ -40,7 +40,7 @@ async function main() {
   const settingsService = runtimePaths.isPackaged
     ? new UserSettingsService({ filePath: runtimePaths.settingsPath })
     : { saveUsername: () => {}, saveOutputDirectory: () => {} };
-  const startupLogger = new Logger(path.join(runtimePaths.outputDir, "startup.log"));
+  const startupLogger = new Logger(path.join(runtimePaths.diagnosticsDir, "startup.log"));
   const session = await authenticateBeforeSelection(options, {
     vaultService,
     settingsService,
@@ -148,9 +148,10 @@ async function main() {
     const startedAtIso = startedAt.toISOString();
 
     const selectedDefinitions = instrumentTargets.map((target) => target.definition);
-    const runId = buildRunId(selectedDefinitions.map((item) => item.key), startedAtIso);
+    const runId = buildRunId(selectedDefinitions.map((item) => item.key), startedAt);
     const outputDir = path.resolve(options.salida || runtimePaths.outputDir);
-    const logger = new Logger(path.join(outputDir, `${runId}.log`));
+    const diagnosticsDir = runtimePaths.diagnosticsDir;
+    const logger = new Logger(path.join(diagnosticsDir, `${runId}.log`));
 
     console.log(`\nCarpeta de salida: ${outputDir}`);
     logger.info("Inicio de ejecución");
@@ -159,7 +160,7 @@ async function main() {
     setSessionLogger(session, logger);
     const { authService, iolHttpClient, discoveryService } = session;
     const aggregationService = new QuoteAggregationService({ iolHttpClient, logger });
-    const exportService = new ExportService({ outputDir, logger });
+    const exportService = new ExportService({ outputDir, diagnosticsDir, logger });
 
     await authService.getAccessToken();
 
@@ -245,7 +246,8 @@ async function main() {
 
     const auditPath = exportService.exportAudit(audit, runId);
 
-    logger.info(`Archivos generados: ${[...createdFiles, auditPath].join(" | ")}`);
+    logger.info(`Archivos exportados: ${createdFiles.join(" | ")}`);
+    logger.info(`Auditoría: ${auditPath}`);
     logger.info("Ejecución finalizada");
     logger.info(`Duración total: ${executionStats.durationText}`);
     logger.info(`Mercado: ${executionStats.market.label}`);
@@ -257,10 +259,12 @@ async function main() {
     console.log(`Mercado: ${executionStats.market.label}`);
     console.log(`\nRegistros exportados: ${allRows.length}`);
     console.log(`Fallos: ${allFailures.length}`);
-    console.log("\nArchivos generados:");
-    for (const filePath of [...createdFiles, auditPath]) {
+    console.log("\nArchivos exportados:");
+    for (const filePath of createdFiles) {
       console.log(`  - ${filePath}`);
     }
+    console.log(`\nLogs y auditoría: ${diagnosticsDir}`);
+    console.log(`  - ${auditPath}`);
 
     if (allFailures.length > 0) {
       console.log("Símbolos con error:");
@@ -416,13 +420,13 @@ function firstDefinedArray(...values) {
   return [];
 }
 
-function buildRunId(instrumentKeys, startedAtIso) {
+function buildRunId(instrumentKeys, startedAt) {
   const allKeys = INSTRUMENT_DEFINITIONS.map((item) => item.key);
   const sorted = [...new Set(instrumentKeys)].sort();
   const isAll = allKeys.length === sorted.length && allKeys.every((key) => sorted.includes(key));
   const instrumentToken = isAll ? "all" : sorted.join("-");
   const safeToken = instrumentToken.replace(/[^a-zA-Z0-9\-]/g, "-").slice(0, 80);
-  return `byma-${safeToken}-${startedAtIso.replace(/[:.]/g, "-")}`;
+  return `byma-${safeToken}-${formatFileTimestampInArgentina(startedAt)}`;
 }
 
 function applyCalculatedImplicitCcl(records) {
@@ -673,5 +677,6 @@ module.exports = {
   refreshSymbolCacheInteractively,
   shouldUseInteractiveMenu,
   formatTokenToFormatos,
-  buildInstrumentTargetsFromSelection
+  buildInstrumentTargetsFromSelection,
+  buildRunId
 };

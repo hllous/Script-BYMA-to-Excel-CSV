@@ -33,6 +33,10 @@ class RuntimePathsService {
   get outputDir() {
     return path.join(this.rootDir, "output");
   }
+
+  get diagnosticsDir() {
+    return path.join(this.rootDir, "diagnostics");
+  }
 }
 
 module.exports = {

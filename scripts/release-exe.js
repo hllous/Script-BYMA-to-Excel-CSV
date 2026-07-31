@@ -84,9 +84,9 @@ function smokePackagedExecutable(exePath, { execFile = execFileSync } = {}) {
       }
     }
 
-    const expectedOutputDir = path.join(smokeAppData, "ScriptIOLExcel", "output");
-    if (!fs.existsSync(expectedOutputDir)) {
-      throw new Error("El ejecutable empaquetado no inicializó su directorio de datos por usuario.");
+    const expectedDiagnosticsDir = path.join(smokeAppData, "ScriptIOLExcel", "diagnostics");
+    if (!fs.existsSync(expectedDiagnosticsDir)) {
+      throw new Error("El ejecutable empaquetado no inicializó su directorio de diagnósticos por usuario.");
     }
   } finally {
     fs.rmSync(smokeDirectory, { recursive: true, force: true });

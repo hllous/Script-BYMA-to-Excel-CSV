@@ -3,8 +3,13 @@ const assert = require("node:assert/strict");
 const {
   shouldUseInteractiveMenu,
   formatTokenToFormatos,
-  buildInstrumentTargetsFromSelection
+  buildInstrumentTargetsFromSelection,
+  buildRunId
 } = require("../src/appRunner");
+
+test("buildRunId uses an Argentina-local, filename-friendly timestamp", () => {
+  assert.equal(buildRunId(["acciones"], new Date("2026-07-31T04:10:36.218Z")), "byma-acciones-2026-07-31_01-10-36");
+});
 
 test("shouldUseInteractiveMenu is true when interactive and no CLI instrumentos/formato flags were given", () => {
   assert.equal(shouldUseInteractiveMenu({ interactive: true }, { instrumentos: null, formatos: null }), true);

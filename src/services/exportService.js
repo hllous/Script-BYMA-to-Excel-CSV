@@ -5,10 +5,12 @@ const { NORMALIZED_FIELDS } = require("../config/constants");
 const { pickNormalizedColumns } = require("../models/quoteSchema");
 
 class ExportService {
-  constructor({ outputDir, logger }) {
+  constructor({ outputDir, diagnosticsDir, logger }) {
     this.outputDir = outputDir;
+    this.diagnosticsDir = diagnosticsDir || path.join(outputDir, "..", "diagnostics");
     this.logger = logger;
     fs.mkdirSync(outputDir, { recursive: true });
+    fs.mkdirSync(this.diagnosticsDir, { recursive: true });
   }
 
   exportData(records, formats, runId) {
@@ -33,7 +35,7 @@ class ExportService {
   }
 
   exportAudit(auditObject, runId) {
-    const auditPath = path.join(this.outputDir, `${runId}-audit.json`);
+    const auditPath = path.join(this.diagnosticsDir, `${runId}-audit.json`);
     fs.writeFileSync(auditPath, `${JSON.stringify(auditObject, null, 2)}\n`, "utf8");
     this.logger.info(`Auditoría exportada: ${auditPath}`);
     return auditPath;

@@ -89,7 +89,7 @@ Para quienes prefieren no instalar Node.js: en la sección [Releases](https://gi
 3. Hacer doble clic en el archivo descargado. Windows puede mostrar una advertencia porque esta versión no tiene firma digital; verificar que se descargó desde este repositorio antes de continuar.
 4. En la primera ejecución, iniciar sesión en IOL; después seleccionar instrumentos y formato de salida
 5. Antes de seleccionar instrumentos, confirmar o cambiar la carpeta de salida. La ruta se muestra nuevamente junto a cada archivo generado.
-6. Por defecto, los archivos generados, preferencias y caché quedan en **`%LOCALAPPDATA%\ScriptIOLExcel\`**
+6. Por defecto, los CSV/XLSX se guardan en **`%LOCALAPPDATA%\ScriptIOLExcel\output\`** y los logs/auditorías en **`%LOCALAPPDATA%\ScriptIOLExcel\diagnostics\`**.
 
 No hace falta instalar Node.js ni ejecutar `npm install` — el `.exe` ya incluye todo lo necesario.
 
@@ -138,7 +138,9 @@ Cada corrida genera:
 ```
 output/
 ├── byma-<timestamp>.csv
-├── byma-<timestamp>.xlsx
+└── byma-<timestamp>.xlsx
+
+diagnostics/
 ├── byma-<timestamp>-audit.json
 └── byma-<timestamp>.log
 ```
@@ -234,7 +236,7 @@ If you'd rather not install Node.js at all, the [Releases](https://github.com/hl
 3. Double-click the downloaded file. Windows may show a warning because this version is not digitally signed; verify it came from this repository before continuing.
 4. On the first run, sign in to IOL; then choose instruments and an output format
 5. Before choosing instruments, confirm or change the output folder. The path is shown again for every generated file.
-6. By default, generated files, preferences, and the cache are stored in **`%LOCALAPPDATA%\ScriptIOLExcel\`**
+6. By default, CSV/XLSX files are saved under **`%LOCALAPPDATA%\ScriptIOLExcel\output\`**, while logs and audits are saved under **`%LOCALAPPDATA%\ScriptIOLExcel\diagnostics\`**.
 
 No Node.js install or `npm install` required — the `.exe` already bundles everything it needs.
 
@@ -283,7 +285,9 @@ Each run generates, per execution:
 ```
 output/
 ├── byma-<timestamp>.csv
-├── byma-<timestamp>.xlsx
+└── byma-<timestamp>.xlsx
+
+diagnostics/
 ├── byma-<timestamp>-audit.json
 └── byma-<timestamp>.log
 ```
