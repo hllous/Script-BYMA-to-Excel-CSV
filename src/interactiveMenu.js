@@ -30,10 +30,14 @@ function symbolChoiceName(categoryKey, simbolo) {
   return `${categoryKey}::${simbolo}`;
 }
 
+function availableCategoryDefinitions(cache) {
+  return INSTRUMENT_DEFINITIONS.filter(
+    (definition) => Array.isArray(cache.categories[definition.key]) && cache.categories[definition.key].length > 0
+  );
+}
+
 function buildSymbolPickerChoices(cache, { allowBack = false } = {}) {
-  const categoryChoices = INSTRUMENT_DEFINITIONS.filter(
-    (def) => Array.isArray(cache.categories[def.key]) && cache.categories[def.key].length > 0
-  ).map((def) => ({
+  const categoryChoices = availableCategoryDefinitions(cache).map((def) => ({
     name: def.key,
     message: def.displayName,
     choices: cache.categories[def.key].map((symbol) => ({
@@ -51,12 +55,20 @@ function buildSymbolPickerChoices(cache, { allowBack = false } = {}) {
   return rows;
 }
 
-function selectionToInitialNames(selection) {
+function selectionToInitialNames(selection, cache) {
   if (!selection) return undefined;
 
-  const names = [...(selection.categories || [])];
+  const hasCache = Boolean(cache && cache.categories);
+  const availableCategories = hasCache ? new Set(availableCategoryDefinitions(cache).map((definition) => definition.key)) : null;
+  const names = (selection.categories || []).filter((category) => !hasCache || availableCategories.has(category));
   for (const { category, simbolo } of selection.symbols || []) {
-    names.push(symbolChoiceName(category, simbolo));
+    const isAvailable =
+      !hasCache ||
+      (Array.isArray(cache.categories[category]) &&
+        cache.categories[category].some((symbol) => symbol.simbolo === simbolo));
+    if (isAvailable) {
+      names.push(symbolChoiceName(category, simbolo));
+    }
   }
   return names.length ? names : undefined;
 }
@@ -117,7 +129,7 @@ async function promptForSymbolSelection({
   }
 
   const choices = buildSymbolPickerChoices(cache, { allowBack });
-  const initial = selectionToInitialNames(initialSelection);
+  const initial = selectionToInitialNames(initialSelection, cache);
 
   const prompt = new AutoComplete({
     name: "symbols",
@@ -185,9 +197,7 @@ async function promptForSymbolSelection({
 }
 
 function buildPresetMenuChoices(cache) {
-  const categoryChoices = INSTRUMENT_DEFINITIONS.filter(
-    (def) => Array.isArray(cache.categories[def.key]) && cache.categories[def.key].length > 0
-  ).map((def) => ({ name: def.key, message: def.displayName }));
+  const categoryChoices = availableCategoryDefinitions(cache).map((def) => ({ name: def.key, message: def.displayName }));
 
   return [
     { name: TODOS_CHOICE, message: "Todos" },
@@ -255,17 +265,34 @@ async function promptForInstrumentSelection({
     throw new Error("No hay caché de símbolos. Actualice la lista desde IOL antes de continuar.");
   }
 
-  const menuResult = await presetMenu({ cache, menuOverrides });
+  let currentCache = cache;
+  const updateSymbolList =
+    typeof onUpdateSymbolList === "function"
+      ? async () => {
+          const freshCache = await onUpdateSymbolList();
+          currentCache = freshCache;
+          return freshCache;
+        }
+      : undefined;
 
-  if (menuResult.mode === "custom") {
-    const result = await customPicker({ cache, onUpdateSymbolList, promptOverrides, allowBack: true });
+  for (;;) {
+    const menuResult = await presetMenu({ cache: currentCache, menuOverrides });
+
+    if (menuResult.mode !== "custom") {
+      return { categories: menuResult.categories, symbols: [] };
+    }
+
+    const result = await customPicker({
+      cache: currentCache,
+      onUpdateSymbolList: updateSymbolList,
+      promptOverrides,
+      allowBack: true
+    });
     if (result.back) {
-      return promptForInstrumentSelection({ cache, onUpdateSymbolList, promptOverrides, menuOverrides, presetMenu, customPicker });
+      continue;
     }
     return result;
   }
-
-  return { categories: menuResult.categories, symbols: [] };
 }
 
 function hasSelection(selection) {

@@ -298,8 +298,10 @@ function buildInstrumentTargetsFromSelection(selection, cache) {
   for (const key of selection.categories) {
     const definition = INSTRUMENT_DEFINITIONS.find((item) => item.key === key);
     if (!definition) continue;
+    const cachedSymbols = cache.categories[key];
+    if (!Array.isArray(cachedSymbols) || cachedSymbols.length === 0) continue;
 
-    const symbolRecords = (cache.categories[key] || []).map((symbol) => ({
+    const symbolRecords = cachedSymbols.map((symbol) => ({
       simbolo: symbol.simbolo,
       descripcion: symbol.descripcion,
       mercado: null,
@@ -311,12 +313,13 @@ function buildInstrumentTargetsFromSelection(selection, cache) {
   for (const { category, simbolo } of selection.symbols) {
     const definition = INSTRUMENT_DEFINITIONS.find((item) => item.key === category);
     if (!definition) continue;
+    const cacheEntry = (cache.categories[category] || []).find((symbol) => symbol.simbolo === simbolo);
+    if (!cacheEntry) continue;
 
     if (!plan.has(category)) {
       plan.set(category, { definition, symbolRecords: [] });
     }
 
-    const cacheEntry = (cache.categories[category] || []).find((symbol) => symbol.simbolo === simbolo);
     plan.get(category).symbolRecords.push({
       simbolo,
       descripcion: cacheEntry ? cacheEntry.descripcion : null,

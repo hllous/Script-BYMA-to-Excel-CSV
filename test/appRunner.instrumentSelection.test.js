@@ -86,3 +86,19 @@ test("buildInstrumentTargetsFromSelection mixes full categories and ad-hoc ticke
 test("buildInstrumentTargetsFromSelection returns an empty list for an empty selection", () => {
   assert.deepEqual(buildInstrumentTargetsFromSelection({ categories: [], symbols: [] }, CACHE), []);
 });
+
+test("buildInstrumentTargetsFromSelection ignores stale categories and symbols missing from the current cache", () => {
+  const targets = buildInstrumentTargetsFromSelection(
+    {
+      categories: ["fci"],
+      symbols: [
+        { category: "acciones", simbolo: "GGAL" },
+        { category: "acciones", simbolo: "STALE" }
+      ]
+    },
+    CACHE
+  );
+
+  assert.equal(targets.length, 1);
+  assert.deepEqual(targets[0].symbolRecords.map((record) => record.simbolo), ["GGAL"]);
+});
