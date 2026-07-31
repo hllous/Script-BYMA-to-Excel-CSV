@@ -1,4 +1,5 @@
 const { NORMALIZED_FIELDS } = require("../config/constants");
+const { formatDateInArgentina } = require("../utils/dateFormat");
 
 function toNumberOrNull(value) {
   if (value === null || value === undefined || value === "") {
@@ -13,7 +14,10 @@ function toDateTimeOrNull(value) {
     return null;
   }
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? null : date.toISOString();
+  // Exported as a human-readable Argentina-local timestamp (matching every
+  // other date shown by this app) instead of a raw ISO string like
+  // "2026-07-30T19:59:47.794Z", which is illegible in the CSV/XLSX output.
+  return Number.isNaN(date.getTime()) ? null : formatDateInArgentina(date);
 }
 
 function createBaseQuote() {

@@ -111,7 +111,7 @@ function printHelp() {
   console.log("Uso:");
   console.log("  node src/appRunner.js --instrumentos=all");
   console.log("");
-  console.log("Parametros disponibles:");
+  console.log("Parámetros disponibles:");
   console.log("  --username=<usuario>       Usuario de IOL");
   console.log("  --password=<password>      Password de IOL");
   console.log(`  --instrumentos=all|${instrumentKeys}`);

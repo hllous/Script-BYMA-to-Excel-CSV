@@ -35,7 +35,7 @@ class ExportService {
   exportAudit(auditObject, runId) {
     const auditPath = path.join(this.outputDir, `${runId}-audit.json`);
     fs.writeFileSync(auditPath, `${JSON.stringify(auditObject, null, 2)}\n`, "utf8");
-    this.logger.info(`Auditoria exportada: ${auditPath}`);
+    this.logger.info(`Auditoría exportada: ${auditPath}`);
     return auditPath;
   }
 }

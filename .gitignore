@@ -4,3 +4,4 @@ output/*.xlsx
 output/*.json
 output/*.log
 config.local.json
+.last-selection.json

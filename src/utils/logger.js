@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const { formatDateInArgentina } = require("./dateFormat");
 
 class Logger {
   constructor(logFilePath) {
@@ -21,9 +22,10 @@ class Logger {
   }
 
   write(level, message) {
-    const timestamp = new Date().toISOString();
+    const timestamp = formatDateInArgentina(new Date());
     const line = `[${timestamp}] [${level}] ${message}`;
-    console.log(line);
+    // Deliberately file-only: the console shows a progress bar and a final
+    // stats summary instead of a scrolling log, see appRunner.js.
     fs.appendFileSync(this.logFilePath, `${line}\n`, "utf8");
   }
 }

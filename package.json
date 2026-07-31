@@ -5,7 +5,8 @@
   "main": "src/appRunner.js",
   "scripts": {
     "start": "node src/appRunner.js",
-    "help": "node src/appRunner.js --help"
+    "help": "node src/appRunner.js --help",
+    "test": "node --test"
   },
   "keywords": [
     "iol",
@@ -16,7 +17,12 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@napi-rs/keyring": "^1.3.0",
     "axios": "^1.14.0",
+    "enquirer": "^2.4.1",
     "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "nock": "^14.0.17"
   }
 }

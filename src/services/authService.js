@@ -32,7 +32,7 @@ class AuthService {
 
   async authenticate() {
     if (!this.username || !this.password) {
-      throw new Error("Faltan credenciales de IOL para autenticacion");
+      throw new Error("Faltan credenciales de IOL para autenticación");
     }
 
     const body = new URLSearchParams({
@@ -49,7 +49,7 @@ class AuthService {
     });
 
     this.storeTokens(response.data);
-    this.logger.info("Autenticacion inicial exitosa");
+    this.logger.info("Autenticación inicial exitosa");
   }
 
   async refreshAccessToken() {
@@ -86,7 +86,7 @@ class AuthService {
   storeTokens(payload) {
     const accessToken = payload && payload.access_token;
     if (!accessToken) {
-      throw new Error("Respuesta de autenticacion sin access_token");
+      throw new Error("Respuesta de autenticación sin access_token");
     }
 
     this.accessToken = accessToken;

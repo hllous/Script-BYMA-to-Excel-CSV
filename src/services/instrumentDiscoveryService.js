@@ -22,7 +22,7 @@ class InstrumentDiscoveryService {
     }
 
     this.logger.info(
-      `Descubrimiento ${instrumentDefinition.key}: ${unique.size} simbolos (${source || "sin fuente"})`
+      `Descubrimiento ${instrumentDefinition.key}: ${unique.size} símbolos (${source || "sin fuente"})`
     );
 
     return {
@@ -46,7 +46,7 @@ class InstrumentDiscoveryService {
     }
 
     throw new Error(
-      `No se pudo descubrir simbolos para ${instrumentDefinition.key}. Detalles: ${failures.join(" | ")}`
+      `No se pudo descubrir símbolos para ${instrumentDefinition.key}. Detalles: ${failures.join(" | ")}`
     );
   }
 

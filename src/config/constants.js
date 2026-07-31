@@ -54,7 +54,6 @@ const NORMALIZED_FIELDS = [
   "simbolo",
   "descripcion",
   "mercado",
-  "panel",
   "ultimoPrecio",
   "apertura",
   "cierreAnterior",
@@ -65,8 +64,7 @@ const NORMALIZED_FIELDS = [
   "rango52SemanasMin",
   "rango52SemanasMax",
   "fechaHoraCotizacion",
-  "mepCclImplicito",
-  "fuente"
+  "mepCclImplicito"
 ];
 
 const DEFAULTS = {

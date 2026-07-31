@@ -16,13 +16,13 @@ class QuoteAggregationService {
     const rows = await runWithConcurrency(symbolRecords, options.concurrency, async (symbolRecord) => {
       try {
         if (!isApiSymbolSafe(symbolRecord.simbolo)) {
-          const errorText = `Simbolo no soportado por endpoint detalle: ${symbolRecord.simbolo}`;
+          const errorText = `Símbolo no soportado por endpoint detalle: ${symbolRecord.simbolo}`;
           failures.push({
             instrumento: instrumentDefinition.key,
             simbolo: symbolRecord.simbolo,
             error: errorText
           });
-          this.logger.warn(`Fallo simbolo ${symbolRecord.simbolo} (${instrumentDefinition.key}): ${errorText}`);
+          this.logger.warn(`Fallo símbolo ${symbolRecord.simbolo} (${instrumentDefinition.key}): ${errorText}`);
           return null;
         }
 
@@ -35,7 +35,7 @@ class QuoteAggregationService {
         };
         failures.push(failure);
         this.logger.warn(
-          `Fallo simbolo ${symbolRecord.simbolo} (${instrumentDefinition.key}): ${error.message}`
+          `Fallo símbolo ${symbolRecord.simbolo} (${instrumentDefinition.key}): ${error.message}`
         );
         return null;
       } finally {
@@ -43,7 +43,10 @@ class QuoteAggregationService {
         if (shouldLogProgress(processed, total, lastLogged)) {
           lastLogged = processed;
           const pct = Math.round((processed / total) * 100);
-          this.logger.info(`Loading ${instrumentDefinition.key}: ${processed}/${total} (${pct}%)`);
+          this.logger.info(`Cargando ${instrumentDefinition.key}: ${processed}/${total} (${pct}%)`);
+          if (typeof options.onProgress === "function") {
+            options.onProgress({ key: instrumentDefinition.key, processed, total, pct });
+          }
         }
       }
     });
@@ -103,7 +106,11 @@ class QuoteAggregationService {
       apertura: pickNumber(quotePayload, ["apertura", "precioApertura"]),
       cierreAnterior: pickNumber(quotePayload, ["cierreAnterior", "precioCierreAnterior"]),
       variacionDiaria: pickNumber(quotePayload, ["variacionDiaria", "variacion", "variacionPorcentual"]),
-      volumen: pickNumber(quotePayload, ["volumen", "volumenNominal", "volumenOperado"]),
+      // The IOL API's volumenNominal/volumenOperado fields report 0 for most
+      // instruments (a known upstream API quirk); montoOperado (traded amount
+      // in ARS) is the field that actually carries real data, so it takes
+      // priority.
+      volumen: pickNumber(quotePayload, ["montoOperado", "volumen", "volumenNominal", "volumenOperado"]),
       maximo: pickNumber(quotePayload, ["maximo", "precioMaximo", "high"]),
       minimo: pickNumber(quotePayload, ["minimo", "precioMinimo", "low"]),
       rango52SemanasMin: range52.min,
@@ -133,7 +140,7 @@ class QuoteAggregationService {
     }
 
     throw new Error(
-      `No se pudo obtener cotizacion detalle para ${symbolRecord.simbolo}. Detalles: ${failures.join(" | ")}`
+      `No se pudo obtener cotización detalle para ${symbolRecord.simbolo}. Detalles: ${failures.join(" | ")}`
     );
   }
 

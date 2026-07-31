@@ -1,18 +1,29 @@
 const path = require("node:path");
 const { parseArgs, printHelp } = require("./utils/argParser");
-const { promptForCredentials } = require("./utils/prompt");
+const { promptForCredentials, promptToSaveToVault } = require("./utils/prompt");
+const {
+  promptForOutputFormat,
+  promptForSymbolSelectionWithReuse,
+  promptForInstrumentSelection,
+  promptForPostRunAction,
+  BACK_CHOICE
+} = require("./interactiveMenu");
 const { loadLocalConfig } = require("./utils/configLoader");
 const { Logger } = require("./utils/logger");
+const { getDateInArgentina, formatDateInArgentina } = require("./utils/dateFormat");
+const { printHomeBanner } = require("./utils/banner");
+const { renderProgressBar } = require("./utils/progressBar");
 const { DEFAULTS, INSTRUMENT_DEFINITIONS } = require("./config/constants");
 const { AuthService } = require("./services/authService");
 const { IolHttpClient } = require("./services/iolHttpClient");
 const { InstrumentDiscoveryService } = require("./services/instrumentDiscoveryService");
 const { QuoteAggregationService } = require("./services/quoteAggregationService");
 const { ExportService } = require("./services/exportService");
+const { CredentialVaultService } = require("./services/credentialVaultService");
+const { SymbolCacheService } = require("./services/symbolCacheService");
+const { LastSelectionService } = require("./services/lastSelectionService");
 
 async function main() {
-  const startedAt = new Date();
-  const startedAtIso = startedAt.toISOString();
   const cliOptions = parseArgs(process.argv);
   if (cliOptions.help) {
     printHelp();
@@ -21,27 +32,232 @@ async function main() {
 
   const localConfig = loadLocalConfig(path.resolve(process.cwd(), "config.local.json"));
   const options = mergeOptions(cliOptions, localConfig);
+  const vaultService = new CredentialVaultService();
 
-  const selectedDefinitions = INSTRUMENT_DEFINITIONS.filter((definition) =>
-    options.instrumentos.includes(definition.key)
-  );
+  const useInteractiveMenu = shouldUseInteractiveMenu(options, cliOptions);
+  const symbolCacheService = useInteractiveMenu ? new SymbolCacheService({}) : null;
+  const lastSelectionService = useInteractiveMenu ? new LastSelectionService({}) : null;
 
-  if (selectedDefinitions.length === 0) {
-    throw new Error("La seleccion de instrumentos no contiene opciones validas");
+  let keepRunning = true;
+  // Only the very first instrument selection of this process may offer to reuse
+  // whatever was saved from a genuinely previous session/process. Every later
+  // pass through this loop - whether from "Volver al menu" after a run, or from
+  // backing out of the format step - starts the picker blank instead, since the
+  // "last selection" at that point is just what was picked a moment ago in this
+  // same session, not a stale prior-session value worth asking about again.
+  let hasPromptedThisSession = false;
+
+  while (keepRunning) {
+    keepRunning = false;
+
+    let instrumentTargets;
+
+    if (useInteractiveMenu) {
+      printHomeBanner();
+
+      let selection;
+      let formatoToken;
+
+      // Lets the user bounce back and forth between instrument selection and
+      // the format step (via "Volver a seleccionar instrumentos") before the
+      // run actually starts.
+      for (;;) {
+        const cache = symbolCacheService.readCache();
+        if (!cache) {
+          throw new Error(
+            "No hay caché de símbolos (data/symbols.json). Restaure el archivo del repositorio o actualice la lista desde IOL."
+          );
+        }
+
+        if (!hasPromptedThisSession) {
+          selection = await promptForSymbolSelectionWithReuse({
+            cache,
+            lastSelectionService,
+            onUpdateSymbolList: () => refreshSymbolCacheInteractively(options, vaultService)
+          });
+          hasPromptedThisSession = true;
+        } else {
+          selection = await promptForInstrumentSelection({
+            cache,
+            onUpdateSymbolList: () => refreshSymbolCacheInteractively(options, vaultService)
+          });
+          // Saved immediately (not deferred to process exit) so that whatever
+          // was last picked in this session is what a future run offers to
+          // reuse - promptForSymbolSelectionWithReuse already does this same
+          // write for the first-ever selection above.
+          lastSelectionService.writeSelection(selection);
+        }
+
+        formatoToken = await promptForOutputFormat({ allowBack: true });
+        if (formatoToken !== BACK_CHOICE) {
+          break;
+        }
+
+        console.clear();
+        printHomeBanner();
+      }
+
+      options.formatos = formatTokenToFormatos(formatoToken);
+
+      const finalCache = symbolCacheService.readCache();
+      instrumentTargets = buildInstrumentTargetsFromSelection(selection, finalCache);
+
+      console.clear();
+    } else {
+      const selectedDefinitions = INSTRUMENT_DEFINITIONS.filter((definition) =>
+        options.instrumentos.includes(definition.key)
+      );
+      instrumentTargets = selectedDefinitions.map((definition) => ({ definition, symbolRecords: null }));
+    }
+
+    if (instrumentTargets.length === 0) {
+      throw new Error("La selección de instrumentos no contiene opciones válidas");
+    }
+
+    // Timing starts here, not at process launch: for the interactive menu, everything
+    // above this point is the user browsing/searching/thinking, which isn't part of the
+    // run's actual work and previously inflated "Duracion total" by however long the user
+    // spent in the picker.
+    const startedAt = new Date();
+    const startedAtIso = startedAt.toISOString();
+
+    const selectedDefinitions = instrumentTargets.map((target) => target.definition);
+    const runId = buildRunId(selectedDefinitions.map((item) => item.key), startedAtIso);
+    const outputDir = path.resolve(process.cwd(), options.salida || DEFAULTS.outputDir);
+    const logger = new Logger(path.join(outputDir, `${runId}.log`));
+
+    logger.info("Inicio de ejecución");
+    logger.info(`Instrumentos solicitados: ${selectedDefinitions.map((item) => item.key).join(",")}`);
+
+    const credentials = await resolveCredentials(options, vaultService);
+    if (!credentials.username || !credentials.password) {
+      throw new Error("No hay credenciales de IOL. Use args, variables de entorno o config.local.json");
+    }
+    // Persist whatever was resolved so a subsequent loop iteration (picking "Volver al
+    // menu" after a run) doesn't prompt for credentials again.
+    options.username = credentials.username;
+    options.password = credentials.password;
+
+    const { authService, iolHttpClient, discoveryService } = buildIolServices(options, credentials, logger);
+    const aggregationService = new QuoteAggregationService({ iolHttpClient, logger });
+    const exportService = new ExportService({ outputDir, logger });
+
+    await authService.getAccessToken();
+
+    const allRows = [];
+    const allFailures = [];
+
+    for (const target of instrumentTargets) {
+      const { definition } = target;
+      logger.info(`Procesando instrumento ${definition.key}...`);
+
+      try {
+        const symbolRecords =
+          target.symbolRecords ||
+          (
+            await discoveryService.getInstrumentSymbols(definition, {
+              pais: options.pais,
+              panel: options.panel,
+              pageSize: options.pageSize,
+              maxPages: options.maxPages
+            })
+          ).symbols;
+
+        if (!symbolRecords.length) {
+          logger.warn(`No se encontraron símbolos para ${definition.key}`);
+          continue;
+        }
+
+        renderProgressBar({ label: `Procesando ${definition.key}`, current: 0, total: symbolRecords.length });
+        const aggregation = await aggregationService.aggregateInstrumentQuotes(definition, symbolRecords, {
+          pais: options.pais,
+          panel: options.panel,
+          concurrency: options.concurrency,
+          onProgress: ({ processed, total }) =>
+            renderProgressBar({ label: `Procesando ${definition.key}`, current: processed, total })
+        });
+
+        allRows.push(...aggregation.records);
+        allFailures.push(...aggregation.failures);
+
+        logger.info(
+          `Instrumento ${definition.key}: ok=${aggregation.records.length}, fallos=${aggregation.failures.length}`
+        );
+      } catch (error) {
+        const failure = {
+          instrumento: definition.key,
+          simbolo: null,
+          error: error.message
+        };
+        allFailures.push(failure);
+        logger.error(`Instrumento ${definition.key} fallo: ${error.message}`);
+      }
+    }
+
+    applyCalculatedImplicitCcl(allRows);
+
+    const createdFiles = exportService.exportData(allRows, options.formatos, runId);
+
+    const endedAt = new Date();
+    const executionStats = buildExecutionStats(startedAt, endedAt, selectedDefinitions.length, allRows.length, allFailures.length);
+
+    const audit = {
+      runId,
+      startedAt: startedAtIso,
+      endedAt: endedAt.toISOString(),
+      duracionMs: executionStats.durationMs,
+      duracionTexto: executionStats.durationText,
+      estadoMercado: executionStats.market.status,
+      cierreMercadoEstimado: executionStats.market.closeAt,
+      totalInstrumentos: selectedDefinitions.length,
+      totalRegistros: allRows.length,
+      totalFallos: allFailures.length,
+      parametros: {
+        instrumentos: options.instrumentos,
+        pais: options.pais,
+        panel: options.panel,
+        formatos: options.formatos,
+        pageSize: options.pageSize,
+        maxPages: options.maxPages,
+        concurrency: options.concurrency
+      },
+      fallos: allFailures
+    };
+
+    const auditPath = exportService.exportAudit(audit, runId);
+
+    logger.info(`Archivos generados: ${[...createdFiles, auditPath].join(" | ")}`);
+    logger.info("Ejecución finalizada");
+    logger.info(`Duración total: ${executionStats.durationText}`);
+    logger.info(`Mercado: ${executionStats.market.label}`);
+
+    console.log("\n=== Estadísticas de corrida ===");
+    console.log(`Inicio: ${formatDateInArgentina(startedAt)}`);
+    console.log(`Fin: ${formatDateInArgentina(endedAt)}`);
+    console.log(`Duración: ${executionStats.durationText}`);
+    console.log(`Mercado: ${executionStats.market.label}`);
+    console.log(`\nRegistros exportados: ${allRows.length}`);
+    console.log(`Fallos: ${allFailures.length}`);
+
+    if (allFailures.length > 0) {
+      console.log("Símbolos con error:");
+      for (const failure of allFailures) {
+        console.log(`  - ${failure.simbolo || `(instrumento ${failure.instrumento} completo)`}: ${failure.error}`);
+      }
+    }
+
+    if (useInteractiveMenu) {
+      console.log("");
+      const postRunAction = await promptForPostRunAction();
+      if (postRunAction === "menu") {
+        console.clear();
+        keepRunning = true;
+      }
+    }
   }
+}
 
-  const runId = buildRunId(selectedDefinitions.map((item) => item.key), startedAtIso);
-  const outputDir = path.resolve(process.cwd(), options.salida || DEFAULTS.outputDir);
-  const logger = new Logger(path.join(outputDir, `${runId}.log`));
-
-  logger.info("Inicio de ejecucion");
-  logger.info(`Instrumentos solicitados: ${options.instrumentos.join(",")}`);
-
-  const credentials = await resolveCredentials(options);
-  if (!credentials.username || !credentials.password) {
-    throw new Error("No hay credenciales de IOL. Use args, variables de entorno o config.local.json");
-  }
-
+function buildIolServices(options, credentials, logger) {
   const authService = new AuthService({
     username: credentials.username,
     password: credentials.password,
@@ -59,97 +275,84 @@ async function main() {
   });
 
   const discoveryService = new InstrumentDiscoveryService({ iolHttpClient, logger });
-  const aggregationService = new QuoteAggregationService({ iolHttpClient, logger });
-  const exportService = new ExportService({ outputDir, logger });
 
-  await authService.getAccessToken();
+  return { authService, iolHttpClient, discoveryService };
+}
 
-  const allRows = [];
-  const allFailures = [];
+// Per spec: the searchable symbol picker + last-selection reuse + format step only take
+// over when nothing was already decided via CLI flags (used by run.bat's :RUN_DIRECT
+// passthrough and by scripted/headless invocations).
+function shouldUseInteractiveMenu(options, cliOptions) {
+  return Boolean(options.interactive) && cliOptions.instrumentos === null && cliOptions.formatos === null;
+}
 
-  for (const definition of selectedDefinitions) {
-    logger.info(`Procesando instrumento ${definition.key}...`);
+function formatTokenToFormatos(formatoToken) {
+  if (formatoToken === "csv") return ["csv"];
+  if (formatoToken === "xlsx") return ["xlsx"];
+  return [...DEFAULTS.formatos];
+}
 
-    try {
-      const discovery = await discoveryService.getInstrumentSymbols(definition, {
-        pais: options.pais,
-        panel: options.panel,
-        pageSize: options.pageSize,
-        maxPages: options.maxPages
-      });
+function buildInstrumentTargetsFromSelection(selection, cache) {
+  const plan = new Map();
 
-      if (!discovery.symbols.length) {
-        logger.warn(`No se encontraron simbolos para ${definition.key}`);
-        continue;
-      }
+  for (const key of selection.categories) {
+    const definition = INSTRUMENT_DEFINITIONS.find((item) => item.key === key);
+    if (!definition) continue;
 
-      const aggregation = await aggregationService.aggregateInstrumentQuotes(definition, discovery.symbols, {
-        pais: options.pais,
-        panel: options.panel,
-        concurrency: options.concurrency
-      });
-
-      allRows.push(...aggregation.records);
-      allFailures.push(...aggregation.failures);
-
-      logger.info(
-        `Instrumento ${definition.key}: ok=${aggregation.records.length}, fallos=${aggregation.failures.length}`
-      );
-    } catch (error) {
-      const failure = {
-        instrumento: definition.key,
-        simbolo: null,
-        error: error.message
-      };
-      allFailures.push(failure);
-      logger.error(`Instrumento ${definition.key} fallo: ${error.message}`);
-    }
+    const symbolRecords = (cache.categories[key] || []).map((symbol) => ({
+      simbolo: symbol.simbolo,
+      descripcion: symbol.descripcion,
+      mercado: null,
+      panel: null
+    }));
+    plan.set(key, { definition, symbolRecords });
   }
 
-  applyCalculatedImplicitCcl(allRows);
+  for (const { category, simbolo } of selection.symbols) {
+    const definition = INSTRUMENT_DEFINITIONS.find((item) => item.key === category);
+    if (!definition) continue;
 
-  const createdFiles = exportService.exportData(allRows, options.formatos, runId);
+    if (!plan.has(category)) {
+      plan.set(category, { definition, symbolRecords: [] });
+    }
 
-  const endedAt = new Date();
-  const executionStats = buildExecutionStats(startedAt, endedAt, selectedDefinitions.length, allRows.length, allFailures.length);
+    const cacheEntry = (cache.categories[category] || []).find((symbol) => symbol.simbolo === simbolo);
+    plan.get(category).symbolRecords.push({
+      simbolo,
+      descripcion: cacheEntry ? cacheEntry.descripcion : null,
+      mercado: null,
+      panel: null
+    });
+  }
 
-  const audit = {
-    runId,
-    startedAt: startedAtIso,
-    endedAt: endedAt.toISOString(),
-    duracionMs: executionStats.durationMs,
-    duracionTexto: executionStats.durationText,
-    estadoMercado: executionStats.market.status,
-    cierreMercadoEstimado: executionStats.market.closeAt,
-    totalInstrumentos: selectedDefinitions.length,
-    totalRegistros: allRows.length,
-    totalFallos: allFailures.length,
-    parametros: {
-      instrumentos: options.instrumentos,
-      pais: options.pais,
-      panel: options.panel,
-      formatos: options.formatos,
-      pageSize: options.pageSize,
-      maxPages: options.maxPages,
-      concurrency: options.concurrency
-    },
-    fallos: allFailures
-  };
+  return Array.from(plan.values());
+}
 
-  const auditPath = exportService.exportAudit(audit, runId);
+// Triggered from within the picker's "Update symbol list from IOL" action. Resolves its
+// own credentials/login/discovery rather than reusing the main run's (not yet resolved
+// at this point in the flow) so the picker can refresh mid-selection. Mutates `options`
+// with whatever credentials it resolves so the main resolveCredentials() call right
+// after the picker doesn't prompt the user a second time.
+async function refreshSymbolCacheInteractively(options, vaultService) {
+  const outputDir = path.resolve(process.cwd(), options.salida || DEFAULTS.outputDir);
+  const logger = new Logger(path.join(outputDir, "symbol-cache-update.log"));
 
-  logger.info(`Archivos generados: ${[...createdFiles, auditPath].join(" | ")}`);
-  logger.info("Ejecucion finalizada");
-  logger.info(`Duracion total: ${executionStats.durationText}`);
-  logger.info(`Mercado: ${executionStats.market.label}`);
+  const credentials = await resolveCredentials(options, vaultService);
+  if (!credentials.username || !credentials.password) {
+    throw new Error("No hay credenciales de IOL para actualizar la lista de símbolos.");
+  }
+  options.username = credentials.username;
+  options.password = credentials.password;
 
-  console.log("\n=== Estadisticas de corrida ===");
-  console.log(`Inicio: ${formatDateInArgentina(startedAt)}`);
-  console.log(`Fin: ${formatDateInArgentina(endedAt)}`);
-  console.log(`Duracion: ${executionStats.durationText}`);
-  console.log(`Mercado: ${executionStats.market.label}`);
-  console.log(`\nRegistros exportados: ${allRows.length}`);
-  console.log(`Fallos: ${allFailures.length}`);
+  const { authService, discoveryService } = buildIolServices(options, credentials, logger);
+  const symbolCacheService = new SymbolCacheService({ authService, discoveryService, logger });
+
+  return symbolCacheService.refreshSymbolCache({
+    pais: options.pais,
+    panel: options.panel,
+    pageSize: options.pageSize,
+    maxPages: options.maxPages
+  });
 }
 
 function mergeOptions(cliOptions, localConfig) {
@@ -341,36 +544,39 @@ function getMarketStatusArgentina(referenceDate) {
   };
 }
 
-function buildArgentinaTime(baseDate, minutesOfDay) {
-  const local = getDateInArgentina(baseDate);
-  const result = new Date(local);
-  result.setHours(0, 0, 0, 0);
-  result.setMinutes(minutesOfDay);
-  return result;
+// Argentina uses a fixed UTC-3 offset (no DST since 2009), so the close-time
+// instant is derived directly from date parts instead of running the
+// getDateInArgentina() "disguise" trick a second time on an already-disguised
+// value - that was a real bug (double-shifted the computed close time by the
+// gap between the host machine's own timezone and Argentina's), invisible
+// only because this has so far always run on a machine already set to
+// Argentina time.
+function buildArgentinaTime(argentinaLocalDate, minutesOfDay) {
+  const utcMs =
+    Date.UTC(argentinaLocalDate.getFullYear(), argentinaLocalDate.getMonth(), argentinaLocalDate.getDate()) +
+    minutesOfDay * 60 * 1000 +
+    3 * 60 * 60 * 1000;
+  return new Date(utcMs);
 }
 
-function getDateInArgentina(sourceDate) {
-  return new Date(sourceDate.toLocaleString("en-US", { timeZone: "America/Argentina/Buenos_Aires" }));
-}
-
-function formatDateInArgentina(date) {
-  return date.toLocaleString("es-AR", {
-    timeZone: "America/Argentina/Buenos_Aires",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit"
-  });
-}
-
-async function resolveCredentials(options) {
+// Precedence: CLI args / config.local.json (options.username+password) > OS credential
+// vault (looked up by username) > interactive masked prompt (offers to save to the vault).
+async function resolveCredentials(options, vaultService) {
   if (options.username && options.password) {
     return {
       username: options.username,
       password: options.password
     };
+  }
+
+  if (options.username) {
+    const vaultPassword = vaultService.getPassword(options.username);
+    if (vaultPassword) {
+      return {
+        username: options.username,
+        password: vaultPassword
+      };
+    }
   }
 
   if (!options.interactive) {
@@ -380,10 +586,29 @@ async function resolveCredentials(options) {
     };
   }
 
-  return promptForCredentials(options.username, options.password);
+  const credentials = await promptForCredentials(options.username, options.password);
+
+  if (credentials.username && credentials.password) {
+    const shouldSave = await promptToSaveToVault();
+    if (shouldSave) {
+      vaultService.setPassword(credentials.username, credentials.password);
+    }
+  }
+
+  return credentials;
 }
 
-main().catch((error) => {
-  console.error(`Error fatal: ${error.message}`);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((error) => {
+    console.error(`Error fatal: ${error.message}`);
+    process.exitCode = 1;
+  });
+}
+
+module.exports = {
+  applyCalculatedImplicitCcl,
+  resolveCredentials,
+  shouldUseInteractiveMenu,
+  formatTokenToFormatos,
+  buildInstrumentTargetsFromSelection
+};

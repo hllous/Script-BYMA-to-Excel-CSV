@@ -1,21 +1,25 @@
-const readline = require("node:readline/promises");
-const { stdin: input, stdout: output } = require("node:process");
+const { Confirm, Input, Password } = require("enquirer");
 
 async function promptForCredentials(currentUsername, currentPassword) {
-  const rl = readline.createInterface({ input, output });
+  const username =
+    currentUsername || (await new Input({ name: "username", message: "Usuario IOL:" }).run());
+  const password =
+    currentPassword || (await new Password({ name: "password", message: "Password IOL:" }).run());
 
-  try {
-    const username = currentUsername || (await rl.question("Usuario IOL: "));
-    const password = currentPassword || (await rl.question("Password IOL: "));
-    return {
-      username: username.trim(),
-      password: password.trim()
-    };
-  } finally {
-    rl.close();
-  }
+  return {
+    username: username.trim(),
+    password: password.trim()
+  };
+}
+
+async function promptToSaveToVault() {
+  return new Confirm({
+    name: "saveToVault",
+    message: "Guardar password en el almacen de credenciales de Windows para la proxima vez?"
+  }).run();
 }
 
 module.exports = {
-  promptForCredentials
+  promptForCredentials,
+  promptToSaveToVault
 };

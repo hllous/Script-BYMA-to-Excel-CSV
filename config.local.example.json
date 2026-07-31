@@ -1,6 +1,5 @@
 {
   "username": "TU_USUARIO_IOL",
-  "password": "TU_PASSWORD_IOL",
   "apiBaseUrl": "https://api.invertironline.com/api/v2",
   "authUrl": "https://api.invertironline.com/token",
   "pais": "argentina",

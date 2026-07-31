@@ -60,20 +60,24 @@ npm install
 
 ### ⚙️ Configuración opcional
 
-Para no ingresar el usuario y la contraseña de IOL en cada corrida, copiá `config.local.example.json` como `config.local.json` y completá tus credenciales y valores por defecto:
+Para no ingresar el usuario de IOL en cada corrida, copiar `config.local.example.json` como `config.local.json` y completar el usuario y los valores por defecto:
 
 ```bash
 cp config.local.example.json config.local.json
 ```
 
-`config.local.json` está en `.gitignore` y nunca se sube al repositorio.
+`config.local.json` está en `.gitignore` y nunca se sube al repositorio. La contraseña **no** se guarda en este archivo: se pide una vez de forma enmascarada y, si se acepta, queda guardada en el almacén de credenciales de Windows para las próximas corridas.
 
 ### 🟢 Modo Fácil (sin línea de comandos)
 
 1. Hacer doble clic en el archivo **`run.bat`**
-2. Ingresar el usuario y la contraseña de IOL cuando se soliciten
-3. Esperar a que finalice el proceso (tarda unos segundos, según la cantidad de instrumentos exportados)
-4. Abrir la carpeta **`output/`**, donde quedan los archivos CSV y/o Excel generados
+2. Si ya se usó el selector antes, va a preguntar si se desea reutilizar la última selección de instrumentos
+3. Seleccionar instrumentos en el menú (marcar categorías enteras como "Acciones" o "Bonos", "Todos", o "Custom" para elegir símbolos específicos)
+4. Si se eligió "Custom", buscar y marcar símbolos puntuales en el selector buscable (hay una opción para actualizar la lista de símbolos desde IOL)
+5. Elegir el formato de salida (CSV + XLSX, solo CSV o solo XLSX)
+6. Ingresar el usuario y la contraseña de IOL cuando se soliciten
+7. Esperar a que finalice el proceso (tarda unos segundos, según la cantidad de instrumentos exportados)
+8. Abrir la carpeta **`output/`**, donde quedan los archivos CSV y/o Excel generados
 
 ### 🔵 Modo Avanzado (línea de comandos)
 
@@ -89,6 +93,8 @@ Con filtros:
 node src/appRunner.js --instrumentos=acciones,cedears,bonos --pais=argentina --panel=general --formato=both
 ```
 
+> Pasar `--instrumentos` y/o `--formato` por CLI evita el selector interactivo (picker de símbolos, reutilizar última selección, paso de formato) y va directo a la corrida, igual que antes del selector.
+
 Ver todas las opciones disponibles:
 
 ```bash
@@ -99,17 +105,17 @@ npm run help
 
 | Parámetro | Descripción | Ejemplo / Valores |
 |---|---|---|
-| `--instrumentos` | Tipos de instrumentos a obtener | `all` o `acciones,cedears,letras,bonos,ons,fci,etfs,opciones` |
+| `--instrumentos` | Tipos de instrumentos a obtener (evita el selector interactivo) | `all` o `acciones,cedears,letras,bonos,ons,fci,etfs,opciones` |
 | `--pais` | Mercado/país | `argentina` |
 | `--panel` | Panel de mercado | `general` |
-| `--formato` | Formato de salida | `both`, `csv`, `xlsx` |
+| `--formato` | Formato de salida (evita el selector interactivo) | `both`, `csv`, `xlsx` |
 | `--salida` | Carpeta de salida | `output` |
 | `--pageSize` | Resultados por página | `100` |
 | `--maxPages` | Páginas máximas por instrumento | `200` |
 | `--concurrency` | Requests en paralelo | `5` |
 | `--timeoutMs` | Timeout de request (ms) | `20000` |
 | `--retries` | Reintentos por request fallido | `3` |
-| `--interactive` | Preguntar por credenciales faltantes | `true` / `false` |
+| `--interactive` | Habilita el selector interactivo y los prompts de credenciales faltantes | `true` / `false` |
 
 ### 📂 Archivos de salida
 
@@ -185,20 +191,24 @@ npm install
 
 ### ⚙️ Optional configuration
 
-To avoid entering your IOL username and password on every run, copy `config.local.example.json` to `config.local.json` and fill in your credentials and default values:
+To avoid entering your IOL username on every run, copy `config.local.example.json` to `config.local.json` and fill in your username and default values:
 
 ```bash
 cp config.local.example.json config.local.json
 ```
 
-`config.local.json` is in `.gitignore` and is never committed to the repo.
+`config.local.json` is in `.gitignore` and is never committed to the repo. Your password is **not** stored in this file: it's requested once with masked input, and if you opt in, it's saved to the Windows credential store for future runs.
 
 ### 🟢 Easy Mode (no command line)
 
 1. Double-click the **`run.bat`** file
-2. Enter your IOL username and password when prompted
-3. Wait for the process to finish (a few seconds, depending on how many instruments are being exported)
-4. Open the **`output/`** folder, where the generated CSV and/or Excel files are saved
+2. If you've used the picker before, it'll ask whether you want to reuse your last selection
+3. Pick instruments from the menu (check whole categories like "Acciones" or "Bonos", "Todos", or "Custom" to pick specific tickers instead)
+4. If you picked "Custom", search and check specific tickers in the searchable picker (there's an option to refresh the symbol list from IOL)
+5. Pick the output format (CSV + XLSX, CSV only, or XLSX only)
+6. Enter your IOL username and password when prompted
+7. Wait for the process to finish (a few seconds, depending on how many instruments are being exported)
+8. Open the **`output/`** folder, where the generated CSV and/or Excel files are saved
 
 ### 🔵 Advanced Mode (command line)
 
@@ -214,6 +224,8 @@ With filters:
 node src/appRunner.js --instrumentos=acciones,cedears,bonos --pais=argentina --panel=general --formato=both
 ```
 
+> Passing `--instrumentos` and/or `--formato` on the CLI skips the interactive menu (symbol picker, last-selection reuse, format step) and runs directly, the same as before the picker existed.
+
 Show all available options:
 
 ```bash
@@ -224,17 +236,17 @@ npm run help
 
 | Parameter | Description | Example / Values |
 |---|---|---|
-| `--instrumentos` | Instrument types to fetch | `all` or `acciones,cedears,letras,bonos,ons,fci,etfs,opciones` |
+| `--instrumentos` | Instrument types to fetch (skips the interactive menu) | `all` or `acciones,cedears,letras,bonos,ons,fci,etfs,opciones` |
 | `--pais` | Market/country | `argentina` |
 | `--panel` | Market panel | `general` |
-| `--formato` | Output format | `both`, `csv`, `xlsx` |
+| `--formato` | Output format (skips the interactive menu) | `both`, `csv`, `xlsx` |
 | `--salida` | Output folder | `output` |
 | `--pageSize` | Results per page | `100` |
 | `--maxPages` | Max pages to fetch per instrument | `200` |
 | `--concurrency` | Parallel requests | `5` |
 | `--timeoutMs` | Request timeout (ms) | `20000` |
 | `--retries` | Retry attempts per failed request | `3` |
-| `--interactive` | Prompt for missing credentials | `true` / `false` |
+| `--interactive` | Enables the interactive menu and prompts for missing credentials | `true` / `false` |
 
 ### 📂 Output Files
 
