@@ -10,6 +10,7 @@ const START_CHOICE = "start";
 const SETTINGS_CHOICE = "settings";
 const CHANGE_OUTPUT_CHOICE = "change-output";
 const CHANGE_OUTPUT_FILE_NAME_CHOICE = "change-output-file-name";
+const TOGGLE_OUTPUT_FILE_NAME_CHOICE = "toggle-output-file-name";
 const TOGGLE_DATE_FOLDERS_CHOICE = "toggle-date-folders";
 const LOGIN_CHOICE = "login";
 const LOGOUT_CHOICE = "logout";
@@ -42,6 +43,7 @@ async function promptForStartupAction({
 async function promptForSettingsAction({
   outputDirectory,
   outputFileName = null,
+  useCustomOutputFileName = false,
   useDateFolders = false,
   selectPrompt = (options) => new Select(options)
 } = {}) {
@@ -51,12 +53,16 @@ async function promptForSettingsAction({
     choices: [
       { name: CHANGE_OUTPUT_CHOICE, message: `Cambiar carpeta de salida (${outputDirectory})` },
       {
+        name: TOGGLE_OUTPUT_FILE_NAME_CHOICE,
+        message: `Usar nombre de archivo personalizado [${formatToggleState(useCustomOutputFileName)}]`
+      },
+      {
         name: CHANGE_OUTPUT_FILE_NAME_CHOICE,
-        message: `Cambiar nombre de archivo de salida (${outputFileName || "automático"})`
+        message: `Cambiar nombre de archivo personalizado (${outputFileName || "automático: byma-<instrumentos>-<fecha>"})`
       },
       {
         name: TOGGLE_DATE_FOLDERS_CHOICE,
-        message: `Guardar archivos en carpetas por fecha [${useDateFolders ? "ON" : "OFF"}]`
+        message: `Guardar archivos en carpetas por fecha [${formatToggleState(useDateFolders)}]`
       },
       { name: UNINSTALL_CHOICE, message: "Eliminar datos de la aplicación" },
       { name: BACK_CHOICE, message: "Volver al menú principal" }
@@ -130,6 +136,10 @@ async function promptForDefaultOutputFileName(currentFileName, { inputPrompt = (
     }
   });
   return String(await prompt.run()).trim() || null;
+}
+
+function formatToggleState(enabled) {
+  return enabled ? "\x1b[32mON\x1b[0m" : "\x1b[31mOFF\x1b[0m";
 }
 
 function symbolChoiceName(categoryKey, simbolo) {
@@ -606,7 +616,9 @@ module.exports = {
   SETTINGS_CHOICE,
   CHANGE_OUTPUT_CHOICE,
   CHANGE_OUTPUT_FILE_NAME_CHOICE,
+  TOGGLE_OUTPUT_FILE_NAME_CHOICE,
   TOGGLE_DATE_FOLDERS_CHOICE,
+  formatToggleState,
   LOGIN_CHOICE,
   LOGOUT_CHOICE,
   UNINSTALL_CHOICE,

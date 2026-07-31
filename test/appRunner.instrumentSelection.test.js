@@ -10,7 +10,8 @@ const {
   buildRunId,
   buildAvailableRunId,
   resolveDataOutputDirectory,
-  mergeOptions
+  mergeOptions,
+  hasCustomOutputFileName
 } = require("../src/appRunner");
 
 test("buildRunId uses an Argentina-local, filename-friendly timestamp", () => {
@@ -36,14 +37,22 @@ test("mergeOptions reads output organization preferences from settings", () => {
   const defaults = mergeOptions(cliOptions, {}, { outputDir: "output" });
   assert.equal(defaults.carpetasPorFecha, false);
   assert.equal(defaults.nombreArchivoSalida, null);
+  assert.equal(defaults.usarNombreArchivoSalida, false);
 
   const configured = mergeOptions(
     cliOptions,
-    { carpetasPorFecha: true, nombreArchivoSalida: "cotizaciones" },
+    { carpetasPorFecha: true, nombreArchivoSalida: "cotizaciones", usarNombreArchivoSalida: true },
     { outputDir: "output" }
   );
   assert.equal(configured.carpetasPorFecha, true);
   assert.equal(configured.nombreArchivoSalida, "cotizaciones");
+  assert.equal(configured.usarNombreArchivoSalida, true);
+});
+
+test("hasCustomOutputFileName only enables overwrite names when both the toggle and a name are set", () => {
+  assert.equal(hasCustomOutputFileName({ usarNombreArchivoSalida: false, nombreArchivoSalida: "cotizaciones" }), false);
+  assert.equal(hasCustomOutputFileName({ usarNombreArchivoSalida: true, nombreArchivoSalida: null }), false);
+  assert.equal(hasCustomOutputFileName({ usarNombreArchivoSalida: true, nombreArchivoSalida: "cotizaciones" }), true);
 });
 
 test("shouldUseInteractiveMenu is true when interactive and no CLI instrumentos/formato flags were given", () => {

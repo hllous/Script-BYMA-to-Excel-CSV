@@ -26,7 +26,9 @@ const {
   SETTINGS_CHOICE,
   CHANGE_OUTPUT_CHOICE,
   CHANGE_OUTPUT_FILE_NAME_CHOICE,
+  TOGGLE_OUTPUT_FILE_NAME_CHOICE,
   TOGGLE_DATE_FOLDERS_CHOICE,
+  formatToggleState,
   LOGIN_CHOICE,
   LOGOUT_CHOICE,
   EXIT_CHOICE,
@@ -58,6 +60,7 @@ test("promptForSettingsAction groups output controls and deletion, showing the d
   const result = await promptForSettingsAction({
     outputDirectory: "C:\\Exports",
     outputFileName: "cotizaciones",
+    useCustomOutputFileName: true,
     useDateFolders: true,
     selectPrompt: (options) => {
       receivedOptions = options;
@@ -68,13 +71,20 @@ test("promptForSettingsAction groups output controls and deletion, showing the d
   assert.equal(result, TOGGLE_DATE_FOLDERS_CHOICE);
   assert.deepEqual(receivedOptions.choices.map((choice) => choice.name), [
     CHANGE_OUTPUT_CHOICE,
+    TOGGLE_OUTPUT_FILE_NAME_CHOICE,
     CHANGE_OUTPUT_FILE_NAME_CHOICE,
     TOGGLE_DATE_FOLDERS_CHOICE,
     "uninstall",
     BACK_CHOICE
   ]);
-  assert.match(receivedOptions.choices[1].message, /cotizaciones/);
-  assert.match(receivedOptions.choices[2].message, /\[ON\]/);
+  assert.match(receivedOptions.choices[1].message, /\x1b\[32mON\x1b\[0m/);
+  assert.match(receivedOptions.choices[2].message, /cotizaciones/);
+  assert.match(receivedOptions.choices[3].message, /\x1b\[32mON\x1b\[0m/);
+});
+
+test("formatToggleState renders ON in green and OFF in red", () => {
+  assert.equal(formatToggleState(true), "\x1b[32mON\x1b[0m");
+  assert.equal(formatToggleState(false), "\x1b[31mOFF\x1b[0m");
 });
 
 test("promptForStartupAction shows logout only when an IOL session is saved", async () => {

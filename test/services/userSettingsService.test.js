@@ -79,3 +79,16 @@ test("saveOutputFileName persists a custom output name and clears it when automa
   assert.equal(service.getOutputFileName(), null);
   assert.deepEqual(JSON.parse(fs.readFileSync(filePath, "utf8")), {});
 });
+
+test("custom output file naming is disabled by default and can be toggled without losing the saved name", () => {
+  const filePath = makeSettingsPath();
+  const service = new UserSettingsService({ filePath });
+
+  assert.equal(service.getUseCustomOutputFileName(), false);
+  service.saveOutputFileName("cotizaciones");
+  assert.equal(service.getUseCustomOutputFileName(), true);
+
+  service.saveUseCustomOutputFileName(false);
+  assert.equal(service.getUseCustomOutputFileName(), false);
+  assert.equal(service.getOutputFileName(), "cotizaciones");
+});

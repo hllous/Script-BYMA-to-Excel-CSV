@@ -40,6 +40,16 @@ class UserSettingsService {
     this.writeSettings(settings);
   }
 
+  getUseCustomOutputFileName() {
+    const settings = this.readSettings();
+    return settings.usarNombreArchivoSalida === true ||
+      (settings.usarNombreArchivoSalida === undefined && Boolean(settings.nombreArchivoSalida));
+  }
+
+  saveUseCustomOutputFileName(enabled) {
+    this.writeSettings({ ...this.readSettings(), usarNombreArchivoSalida: enabled === true });
+  }
+
   clearCredentials() {
     const settings = this.readSettings();
     delete settings.username;
