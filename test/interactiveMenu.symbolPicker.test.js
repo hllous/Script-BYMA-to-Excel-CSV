@@ -5,6 +5,7 @@ const {
   promptForOutputDirectory,
   promptForOutputFormat,
   promptForStartupAction,
+  promptForPostRunAction,
   buildSymbolPickerChoices,
   buildSymbolSelectionShape,
   selectionToInitialNames,
@@ -60,6 +61,18 @@ test("promptForStartupAction shows logout only when an IOL session is saved", as
 
   assert.equal(receivedOptions.choices[2].name, LOGOUT_CHOICE);
   assert.equal(receivedOptions.choices[2].message, "Cerrar sesión de IOL");
+});
+
+test("promptForPostRunAction omits logout after exports", async () => {
+  let receivedOptions;
+  await promptForPostRunAction({
+    selectPrompt: (options) => {
+      receivedOptions = options;
+      return { run: async () => "quit" };
+    }
+  });
+
+  assert.deepEqual(receivedOptions.choices.map((choice) => choice.name), ["menu", "main-menu", "quit"]);
 });
 
 test("promptForOutputDirectory shows the current folder and resolves a custom selection", async () => {

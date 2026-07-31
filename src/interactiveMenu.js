@@ -448,14 +448,13 @@ function formatSelectionSummary(selection) {
   return [...categoryNames, ...tickers].join(", ");
 }
 
-async function promptForPostRunAction() {
-  const prompt = new Select({
+async function promptForPostRunAction({ selectPrompt = (options) => new Select(options) } = {}) {
+  const prompt = selectPrompt({
     name: "postRun",
     message: "¿Qué quiere hacer ahora?",
     choices: [
       { name: "menu", message: "Volver a seleccionar instrumentos" },
       { name: "main-menu", message: "Volver al menú principal" },
-      { name: LOGOUT_CHOICE, message: "Cerrar sesión de IOL" },
       { name: "quit", message: "Salir" }
     ],
     footer: "\n( ↑↓ mover · ↵ confirmar )"
