@@ -3,6 +3,7 @@ const { parseArgs, printHelp } = require("./utils/argParser");
 const { promptForCredentials, promptToSaveToVault } = require("./utils/prompt");
 const {
   promptForOutputFormat,
+  promptForOutputDirectory,
   promptForSymbolSelectionWithReuse,
   promptForInstrumentSelection,
   promptForPostRunAction,
@@ -38,7 +39,7 @@ async function main() {
   const vaultService = new CredentialVaultService();
   const settingsService = runtimePaths.isPackaged
     ? new UserSettingsService({ filePath: runtimePaths.settingsPath })
-    : { saveUsername: () => {} };
+    : { saveUsername: () => {}, saveOutputDirectory: () => {} };
   const startupLogger = new Logger(path.join(runtimePaths.outputDir, "startup.log"));
   const session = await authenticateBeforeSelection(options, {
     vaultService,
@@ -49,6 +50,10 @@ async function main() {
   options.password = session.credentials.password;
 
   const useInteractiveMenu = shouldUseInteractiveMenu(options, cliOptions);
+  if (useInteractiveMenu) {
+    options.salida = await promptForOutputDirectory(options.salida);
+    settingsService.saveOutputDirectory(options.salida);
+  }
   const symbolCacheService = useInteractiveMenu
     ? new SymbolCacheService({
         authService: session.authService,
@@ -147,6 +152,7 @@ async function main() {
     const outputDir = path.resolve(options.salida || runtimePaths.outputDir);
     const logger = new Logger(path.join(outputDir, `${runId}.log`));
 
+    console.log(`\nCarpeta de salida: ${outputDir}`);
     logger.info("Inicio de ejecución");
     logger.info(`Instrumentos solicitados: ${selectedDefinitions.map((item) => item.key).join(",")}`);
 
@@ -251,6 +257,10 @@ async function main() {
     console.log(`Mercado: ${executionStats.market.label}`);
     console.log(`\nRegistros exportados: ${allRows.length}`);
     console.log(`Fallos: ${allFailures.length}`);
+    console.log("\nArchivos generados:");
+    for (const filePath of [...createdFiles, auditPath]) {
+      console.log(`  - ${filePath}`);
+    }
 
     if (allFailures.length > 0) {
       console.log("Símbolos con error:");

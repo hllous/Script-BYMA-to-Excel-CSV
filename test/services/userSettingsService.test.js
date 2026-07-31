@@ -24,3 +24,16 @@ test("saveUsername persists the non-secret username while preserving existing se
   assert.equal(service.getUsername(), "nico");
   assert.deepEqual(JSON.parse(fs.readFileSync(filePath, "utf8")), { pais: "argentina", username: "nico" });
 });
+
+test("saveOutputDirectory persists the chosen output folder while preserving existing settings", () => {
+  const filePath = makeSettingsPath();
+  fs.writeFileSync(filePath, JSON.stringify({ username: "nico" }), "utf8");
+  const service = new UserSettingsService({ filePath });
+
+  service.saveOutputDirectory("C:\\Users\\nico\\Exports");
+
+  assert.deepEqual(JSON.parse(fs.readFileSync(filePath, "utf8")), {
+    username: "nico",
+    salida: "C:\\Users\\nico\\Exports"
+  });
+});

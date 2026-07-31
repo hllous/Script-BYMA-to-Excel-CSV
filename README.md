@@ -72,13 +72,13 @@ cp config.local.example.json config.local.json
 ### 🟢 Modo Fácil (sin línea de comandos)
 
 1. Hacer doble clic en el archivo **`run.bat`**
-2. Si ya se usó el selector antes, va a preguntar si se desea reutilizar la última selección de instrumentos
-3. Seleccionar instrumentos en el menú (marcar categorías enteras como "Acciones" o "Bonos", "Todos", o "Custom" para elegir símbolos específicos)
-4. Si se eligió "Custom", buscar y marcar símbolos puntuales en el selector buscable (hay una opción para actualizar la lista de símbolos desde IOL)
-5. Elegir el formato de salida (CSV + XLSX, solo CSV o solo XLSX)
-6. Ingresar el usuario y la contraseña de IOL cuando se soliciten
-7. Esperar a que finalice el proceso (tarda unos segundos, según la cantidad de instrumentos exportados)
-8. Abrir la carpeta **`output/`**, donde quedan los archivos CSV y/o Excel generados
+2. Ingresar y validar el usuario y la contraseña de IOL cuando se soliciten
+3. Confirmar o cambiar la carpeta de salida que se muestra antes del selector. La carpeta elegida queda guardada para la próxima ejecución.
+4. Si ya se usó el selector antes, va a preguntar si se desea reutilizar la última selección de instrumentos
+5. Seleccionar instrumentos en el menú (marcar categorías enteras como "Acciones" o "Bonos", "Todos", o "Custom" para elegir símbolos específicos)
+6. Si se eligió "Custom", buscar y marcar símbolos puntuales en el selector buscable (hay una opción para actualizar la lista de símbolos desde IOL)
+7. Elegir el formato de salida (CSV + XLSX, solo CSV o solo XLSX)
+8. Esperar a que finalice el proceso (tarda unos segundos, según la cantidad de instrumentos exportados). Al finalizar se muestran las rutas exactas de todos los archivos generados.
 
 ### 📦 Ejecutable standalone (.exe)
 
@@ -88,7 +88,8 @@ Para quienes prefieren no instalar Node.js: en la sección [Releases](https://gi
 2. Comparar el SHA-256 del archivo con `SHA256SUMS.txt` publicado en la release
 3. Hacer doble clic en el archivo descargado. Windows puede mostrar una advertencia porque esta versión no tiene firma digital; verificar que se descargó desde este repositorio antes de continuar.
 4. En la primera ejecución, iniciar sesión en IOL; después seleccionar instrumentos y formato de salida
-5. Los archivos generados, preferencias y caché quedan en **`%LOCALAPPDATA%\ScriptIOLExcel\`**
+5. Antes de seleccionar instrumentos, confirmar o cambiar la carpeta de salida. La ruta se muestra nuevamente junto a cada archivo generado.
+6. Por defecto, los archivos generados, preferencias y caché quedan en **`%LOCALAPPDATA%\ScriptIOLExcel\`**
 
 No hace falta instalar Node.js ni ejecutar `npm install` — el `.exe` ya incluye todo lo necesario.
 
@@ -216,13 +217,13 @@ cp config.local.example.json config.local.json
 ### 🟢 Easy Mode (no command line)
 
 1. Double-click the **`run.bat`** file
-2. If you've used the picker before, it'll ask whether you want to reuse your last selection
-3. Pick instruments from the menu (check whole categories like "Acciones" or "Bonos", "Todos", or "Custom" to pick specific tickers instead)
-4. If you picked "Custom", search and check specific tickers in the searchable picker (there's an option to refresh the symbol list from IOL)
-5. Pick the output format (CSV + XLSX, CSV only, or XLSX only)
-6. Enter your IOL username and password when prompted
-7. Wait for the process to finish (a few seconds, depending on how many instruments are being exported)
-8. Open the **`output/`** folder, where the generated CSV and/or Excel files are saved
+2. Enter and validate your IOL username and password when prompted
+3. Confirm or change the output folder shown before the picker. The chosen folder is retained for the next run.
+4. If you've used the picker before, it'll ask whether you want to reuse your last selection
+5. Pick instruments from the menu (check whole categories like "Acciones" or "Bonos", "Todos", or "Custom" to pick specific tickers instead)
+6. If you picked "Custom", search and check specific tickers in the searchable picker (there's an option to refresh the symbol list from IOL)
+7. Pick the output format (CSV + XLSX, CSV only, or XLSX only)
+8. Wait for the process to finish (a few seconds, depending on how many instruments are being exported). The exact path to every generated file is printed when it finishes.
 
 ### 📦 Standalone .exe
 
@@ -232,7 +233,8 @@ If you'd rather not install Node.js at all, the [Releases](https://github.com/hl
 2. Compare the file's SHA-256 with the `SHA256SUMS.txt` published with the release
 3. Double-click the downloaded file. Windows may show a warning because this version is not digitally signed; verify it came from this repository before continuing.
 4. On the first run, sign in to IOL; then choose instruments and an output format
-5. Generated files, preferences, and the cache are stored in **`%LOCALAPPDATA%\ScriptIOLExcel\`**
+5. Before choosing instruments, confirm or change the output folder. The path is shown again for every generated file.
+6. By default, generated files, preferences, and the cache are stored in **`%LOCALAPPDATA%\ScriptIOLExcel\`**
 
 No Node.js install or `npm install` required — the `.exe` already bundles everything it needs.
 

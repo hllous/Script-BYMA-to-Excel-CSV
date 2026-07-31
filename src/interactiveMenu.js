@@ -1,10 +1,25 @@
-const { Select, MultiSelect, AutoComplete, Confirm } = require("enquirer");
+const path = require("node:path");
+const { Select, MultiSelect, AutoComplete, Confirm, Input } = require("enquirer");
 const { INSTRUMENT_DEFINITIONS } = require("./config/constants");
 
 const UPDATE_SYMBOL_LIST_CHOICE = "__update_symbol_list__";
 const BACK_CHOICE = "__back__";
 const TODOS_CHOICE = "__todos__";
 const CUSTOM_CHOICE = "__custom__";
+
+async function promptForOutputDirectory(currentOutputDir, { inputPrompt = (options) => new Input(options) } = {}) {
+  const prompt = inputPrompt({
+    name: "salida",
+    message: "Carpeta donde se guardarán los archivos:",
+    initial: currentOutputDir,
+    footer: "\n( ↵ mantener esta carpeta · escribir una ruta para cambiarla )",
+    validate(value) {
+      return String(value || "").trim() ? true : "Ingresá una carpeta de salida.";
+    }
+  });
+  const selectedDirectory = await prompt.run();
+  return path.resolve(String(selectedDirectory).trim());
+}
 
 async function promptForOutputFormat({ allowBack = false } = {}) {
   const choices = [
@@ -359,6 +374,7 @@ async function promptForSymbolSelectionWithReuse({
 }
 
 module.exports = {
+  promptForOutputDirectory,
   promptForOutputFormat,
   promptForSymbolSelection,
   promptForSymbolSelectionWithReuse,
