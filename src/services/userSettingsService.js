@@ -18,6 +18,14 @@ class UserSettingsService {
     this.writeSettings({ ...this.readSettings(), salida: outputDirectory });
   }
 
+  getUseDateFolders() {
+    return this.readSettings().carpetasPorFecha === true;
+  }
+
+  saveUseDateFolders(enabled) {
+    this.writeSettings({ ...this.readSettings(), carpetasPorFecha: enabled === true });
+  }
+
   clearCredentials() {
     const settings = this.readSettings();
     delete settings.username;

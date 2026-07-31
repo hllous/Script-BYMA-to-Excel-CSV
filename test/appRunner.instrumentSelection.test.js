@@ -8,7 +8,9 @@ const {
   formatTokenToFormatos,
   buildInstrumentTargetsFromSelection,
   buildRunId,
-  buildAvailableRunId
+  buildAvailableRunId,
+  resolveDataOutputDirectory,
+  mergeOptions
 } = require("../src/appRunner");
 
 test("buildRunId uses an Argentina-local, filename-friendly timestamp", () => {
@@ -21,6 +23,18 @@ test("buildAvailableRunId adds a counter instead of overwriting another run in t
   fs.writeFileSync(path.join(directory, `${runId}.csv`), "existing", "utf8");
 
   assert.equal(buildAvailableRunId(runId, [directory]), `${runId}-2`);
+});
+
+test("resolveDataOutputDirectory groups exports in an Argentina-local date folder only when enabled", () => {
+  const date = new Date("2026-07-31T04:10:36.218Z");
+  assert.equal(resolveDataOutputDirectory("output", false, date), path.resolve("output"));
+  assert.equal(resolveDataOutputDirectory("output", true, date), path.join(path.resolve("output"), "2026-07-31"));
+});
+
+test("mergeOptions reads the date-folder preference from settings and defaults it off", () => {
+  const cliOptions = { help: false };
+  assert.equal(mergeOptions(cliOptions, {}, { outputDir: "output" }).carpetasPorFecha, false);
+  assert.equal(mergeOptions(cliOptions, { carpetasPorFecha: true }, { outputDir: "output" }).carpetasPorFecha, true);
 });
 
 test("shouldUseInteractiveMenu is true when interactive and no CLI instrumentos/formato flags were given", () => {

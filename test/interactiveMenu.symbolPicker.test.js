@@ -4,7 +4,9 @@ const path = require("node:path");
 const {
   promptForOutputDirectory,
   promptForOutputFormat,
+  promptForOutputFileName,
   promptForStartupAction,
+  promptForSettingsAction,
   promptForPostRunAction,
   buildSymbolPickerChoices,
   buildSymbolSelectionShape,
@@ -21,32 +23,54 @@ const {
   BACK_CHOICE,
   TODOS_CHOICE,
   CUSTOM_CHOICE,
+  SETTINGS_CHOICE,
   CHANGE_OUTPUT_CHOICE,
+  TOGGLE_DATE_FOLDERS_CHOICE,
   LOGIN_CHOICE,
   LOGOUT_CHOICE,
   EXIT_CHOICE,
   MAIN_MENU_CHOICE
 } = require("../src/interactiveMenu");
 
-test("promptForStartupAction exposes all executable menu actions", async () => {
+test("promptForStartupAction exposes the executable main menu with settings", async () => {
   let receivedOptions;
   const result = await promptForStartupAction({
     selectPrompt: (options) => {
       receivedOptions = options;
-      return { run: async () => "uninstall" };
+      return { run: async () => SETTINGS_CHOICE };
     }
   });
 
-  assert.equal(result, "uninstall");
+  assert.equal(result, SETTINGS_CHOICE);
   assert.deepEqual(receivedOptions.choices.map((choice) => choice.name), [
     "start",
-    CHANGE_OUTPUT_CHOICE,
+    SETTINGS_CHOICE,
     LOGIN_CHOICE,
-    "uninstall",
     EXIT_CHOICE
   ]);
   assert.equal(receivedOptions.choicesHeader, " ");
   assert.equal(receivedOptions.choices[2].message, "Iniciar sesión de IOL");
+});
+
+test("promptForSettingsAction groups output and deletion controls, showing the date-folder state", async () => {
+  let receivedOptions;
+  const result = await promptForSettingsAction({
+    outputDirectory: "C:\\Exports",
+    useDateFolders: true,
+    selectPrompt: (options) => {
+      receivedOptions = options;
+      return { run: async () => TOGGLE_DATE_FOLDERS_CHOICE };
+    }
+  });
+
+  assert.equal(result, TOGGLE_DATE_FOLDERS_CHOICE);
+  assert.deepEqual(receivedOptions.choices.map((choice) => choice.name), [
+    CHANGE_OUTPUT_CHOICE,
+    TOGGLE_DATE_FOLDERS_CHOICE,
+    "uninstall",
+    BACK_CHOICE
+  ]);
+  assert.match(receivedOptions.choices[1].message, /\[ON\]/);
 });
 
 test("promptForStartupAction shows logout only when an IOL session is saved", async () => {
@@ -102,6 +126,22 @@ test("promptForOutputFormat requires one space-selected format before Enter cont
   assert.match(receivedOptions.footer, /␣ seleccionar/);
   assert.equal(receivedOptions.validate([]), "Seleccioná un único formato antes de continuar.");
   assert.equal(receivedOptions.validate(["csv"]), true);
+});
+
+test("promptForOutputFileName keeps a custom base name and blocks paths or extensions", async () => {
+  let receivedOptions;
+  const result = await promptForOutputFileName("byma-default", {
+    inputPrompt: (options) => {
+      receivedOptions = options;
+      return { run: async () => "cotizaciones-manana" };
+    }
+  });
+
+  assert.equal(result, "cotizaciones-manana");
+  assert.equal(receivedOptions.initial, "byma-default");
+  assert.notEqual(receivedOptions.validate("subdir/file"), true);
+  assert.notEqual(receivedOptions.validate("archivo.csv"), true);
+  assert.equal(receivedOptions.validate("archivo-final"), true);
 });
 
 test("output-format back action is rendered without a checkbox indicator", async () => {
@@ -358,10 +398,10 @@ function makeLastSelectionService(initial) {
   };
 }
 
-test("promptForSymbolSelectionWithReuse skips the confirm prompt and goes straight to the picker when there is no prior selection", async () => {
+test("promptForSymbolSelectionWithReuse skips the previous-selection menu and goes straight to the picker when there is no prior selection", async () => {
   const lastSelectionService = makeLastSelectionService(null);
   const cache = { categories: {} };
-  const confirmReuse = async () => {
+  const chooseLastSelectionAction = async () => {
     throw new Error("should not be called");
   };
   const selectSymbols = async (args) => {
@@ -374,44 +414,40 @@ test("promptForSymbolSelectionWithReuse skips the confirm prompt and goes straig
     cache,
     lastSelectionService,
     selectSymbols,
-    confirmReuse
+    chooseLastSelectionAction
   });
 
   assert.deepEqual(result, { categories: ["acciones"], symbols: [] });
   assert.deepEqual(lastSelectionService.writes, [{ categories: ["acciones"], symbols: [] }]);
 });
 
-test("promptForSymbolSelectionWithReuse returns the stored selection without opening the picker when the user confirms reuse", async () => {
+test("promptForSymbolSelectionWithReuse returns the stored selection without opening the picker when reuse is selected", async () => {
   const stored = { categories: ["acciones"], symbols: [] };
   const lastSelectionService = makeLastSelectionService(stored);
   const selectSymbols = async () => {
     throw new Error("picker should not open when reusing the last selection");
   };
-  const confirmReuse = async (summary) => {
+  const chooseLastSelectionAction = async (summary) => {
     assert.equal(summary, "Acciones");
-    return true;
+    return "reuse";
   };
 
   const result = await promptForSymbolSelectionWithReuse({
     cache: { categories: {} },
     lastSelectionService,
     selectSymbols,
-    confirmReuse
+    chooseLastSelectionAction
   });
 
   assert.deepEqual(result, stored);
   assert.deepEqual(lastSelectionService.writes, []);
 });
 
-test("promptForSymbolSelectionWithReuse opens the picker/menu completely blank (not pre-checked) when the user declines reuse", async () => {
+test("promptForSymbolSelectionWithReuse opens a blank picker/menu when a new selection is selected", async () => {
   const stored = { categories: ["acciones"], symbols: [] };
   const lastSelectionService = makeLastSelectionService(stored);
-  const confirmReuse = async () => false;
+  const chooseLastSelectionAction = async () => "new";
   const selectSymbols = async (args) => {
-    // Declining reuse discards the old selection entirely - no initialSelection at all,
-    // same as a first-ever run. This was a deliberate product decision (not the original
-    // ticket 05 spec, which pre-checked as a starting point) after real usage showed the
-    // pre-checked behavior read as "my selection didn't get cleared" to users.
     assert.equal(args.initialSelection, undefined);
     return { categories: [], symbols: [{ category: "cedears", simbolo: "AAPL" }] };
   };
@@ -420,11 +456,30 @@ test("promptForSymbolSelectionWithReuse opens the picker/menu completely blank (
     cache: { categories: {} },
     lastSelectionService,
     selectSymbols,
-    confirmReuse
+    chooseLastSelectionAction
   });
 
   assert.deepEqual(result, { categories: [], symbols: [{ category: "cedears", simbolo: "AAPL" }] });
   assert.deepEqual(lastSelectionService.writes, [{ categories: [], symbols: [{ category: "cedears", simbolo: "AAPL" }] }]);
+});
+
+test("promptForSymbolSelectionWithReuse opens a preselected picker and saves edits when modify is selected", async () => {
+  const stored = { categories: [], symbols: [{ category: "acciones", simbolo: "GGAL" }] };
+  const lastSelectionService = makeLastSelectionService(stored);
+  const edited = { categories: [], symbols: [{ category: "acciones", simbolo: "YPFD" }] };
+
+  const result = await promptForSymbolSelectionWithReuse({
+    cache: { categories: {} },
+    lastSelectionService,
+    chooseLastSelectionAction: async () => "modify",
+    customPicker: async (args) => {
+      assert.deepEqual(args.initialSelection, stored);
+      return edited;
+    }
+  });
+
+  assert.deepEqual(result, edited);
+  assert.deepEqual(lastSelectionService.writes, [edited]);
 });
 
 test("buildPresetMenuChoices lists categories and navigation choices", () => {

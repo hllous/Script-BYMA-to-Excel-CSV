@@ -7,7 +7,9 @@ const BACK_CHOICE = "__back__";
 const TODOS_CHOICE = "__todos__";
 const CUSTOM_CHOICE = "__custom__";
 const START_CHOICE = "start";
+const SETTINGS_CHOICE = "settings";
 const CHANGE_OUTPUT_CHOICE = "change-output";
+const TOGGLE_DATE_FOLDERS_CHOICE = "toggle-date-folders";
 const LOGIN_CHOICE = "login";
 const LOGOUT_CHOICE = "logout";
 const UNINSTALL_CHOICE = "uninstall";
@@ -26,10 +28,32 @@ async function promptForStartupAction({
     message: "¿Qué desea hacer?",
     choices: [
       { name: START_CHOICE, message: "Iniciar ScriptIOLExcel" },
-      { name: CHANGE_OUTPUT_CHOICE, message: "Cambiar carpeta de salida" },
+      { name: SETTINGS_CHOICE, message: "Configuración" },
       accountAction,
-      { name: UNINSTALL_CHOICE, message: "Eliminar datos de la aplicación" },
       { name: EXIT_CHOICE, message: "Salir" }
+    ],
+    choicesHeader: " ",
+    footer: "\n( ↑↓ mover · ↵ confirmar )"
+  });
+  return prompt.run();
+}
+
+async function promptForSettingsAction({
+  outputDirectory,
+  useDateFolders = false,
+  selectPrompt = (options) => new Select(options)
+} = {}) {
+  const prompt = selectPrompt({
+    name: "settingsAction",
+    message: "Configuración:",
+    choices: [
+      { name: CHANGE_OUTPUT_CHOICE, message: `Cambiar carpeta de salida (${outputDirectory})` },
+      {
+        name: TOGGLE_DATE_FOLDERS_CHOICE,
+        message: `Guardar archivos en carpetas por fecha [${useDateFolders ? "ON" : "OFF"}]`
+      },
+      { name: UNINSTALL_CHOICE, message: "Eliminar datos de la aplicación" },
+      { name: BACK_CHOICE, message: "Volver al menú principal" }
     ],
     choicesHeader: " ",
     footer: "\n( ↑↓ mover · ↵ confirmar )"
@@ -81,6 +105,25 @@ async function promptForOutputFormat({
 
   const selected = await enableImmediateNavigationSubmit(prompt, [BACK_CHOICE]).run();
   return selected[0];
+}
+
+async function promptForOutputFileName(defaultFileName, { inputPrompt = (options) => new Input(options) } = {}) {
+  const prompt = inputPrompt({
+    name: "outputFileName",
+    message: "Nombre del archivo de salida (sin extensión):",
+    initial: defaultFileName,
+    footer: "\n( ↵ mantener nombre · si existe, CSV/XLSX se reemplazarán )",
+    validate(value) {
+      const name = String(value || "").trim();
+      if (!name) return "Ingresá un nombre de archivo.";
+      if (name === "." || name === ".." || /[\\\\/:*?\"<>|]/.test(name)) {
+        return "Usá un nombre de archivo sin rutas ni caracteres no válidos.";
+      }
+      if (/\.(csv|xlsx)$/i.test(name)) return "Ingresá el nombre sin la extensión .csv o .xlsx.";
+      return true;
+    }
+  });
+  return String(await prompt.run()).trim();
 }
 
 function symbolChoiceName(categoryKey, simbolo) {
@@ -475,6 +518,20 @@ async function promptToReuseLastSelection(summary) {
   }).run();
 }
 
+async function promptForLastSelectionAction(summary, { selectPrompt = (options) => new Select(options) } = {}) {
+  const prompt = selectPrompt({
+    name: "lastSelectionAction",
+    message: `Hay una selección anterior: ${summary}`,
+    choices: [
+      { name: "reuse", message: "Usarla para esta ejecución" },
+      { name: "modify", message: "Modificar: agregar o quitar instrumentos" },
+      { name: "new", message: "Elegir una selección nueva" }
+    ],
+    footer: "\n( ↑↓ mover · ↵ confirmar )"
+  });
+  return prompt.run();
+}
+
 async function promptForSymbolSelectionWithReuse({
   cache,
   lastSelectionService,
@@ -482,19 +539,30 @@ async function promptForSymbolSelectionWithReuse({
   promptOverrides,
   menuOverrides,
   selectSymbols = promptForInstrumentSelection,
-  confirmReuse = promptToReuseLastSelection
+  customPicker = promptForSymbolSelection,
+  chooseLastSelectionAction = promptForLastSelectionAction
 } = {}) {
   const lastSelection = lastSelectionService.readSelection();
 
   if (hasSelection(lastSelection)) {
-    const reuse = await confirmReuse(formatSelectionSummary(lastSelection));
-    if (reuse) {
+    const action = await chooseLastSelectionAction(formatSelectionSummary(lastSelection));
+    if (action === "reuse") {
       return lastSelection;
+    }
+    if (action === "modify") {
+      const selection = await customPicker({
+        cache,
+        initialSelection: lastSelection,
+        onUpdateSymbolList,
+        promptOverrides
+      });
+      lastSelectionService.writeSelection(selection);
+      return selection;
     }
   }
 
-  // Declining reuse discards the old selection entirely - the picker/menu always
-  // starts blank here, it's never pre-checked with what was just declined.
+  // Choosing a new selection deliberately starts the picker/menu blank rather
+  // than silently carrying over any part of the prior selection.
   const selection = await selectSymbols({ cache, onUpdateSymbolList, promptOverrides, menuOverrides });
   if (!selection.mainMenu && !selection.exit) {
     lastSelectionService.writeSelection(selection);
@@ -504,14 +572,17 @@ async function promptForSymbolSelectionWithReuse({
 
 module.exports = {
   promptForStartupAction,
+  promptForSettingsAction,
   promptForOutputDirectory,
   promptForOutputFormat,
+  promptForOutputFileName,
   promptForSymbolSelection,
   promptForSymbolSelectionWithReuse,
   promptForInstrumentSelection,
   promptForInstrumentPresetMenu,
   promptForPostRunAction,
   promptToReuseLastSelection,
+  promptForLastSelectionAction,
   formatSelectionSummary,
   buildSymbolPickerChoices,
   buildSymbolSelectionShape,
@@ -526,7 +597,9 @@ module.exports = {
   TODOS_CHOICE,
   CUSTOM_CHOICE,
   START_CHOICE,
+  SETTINGS_CHOICE,
   CHANGE_OUTPUT_CHOICE,
+  TOGGLE_DATE_FOLDERS_CHOICE,
   LOGIN_CHOICE,
   LOGOUT_CHOICE,
   UNINSTALL_CHOICE,
