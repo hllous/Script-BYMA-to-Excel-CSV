@@ -14,6 +14,7 @@ const {
   promptForInstrumentSelection,
   buildPresetMenuChoices,
   resolvePresetMenuSelection,
+  enableImmediateNavigationSubmit,
   UPDATE_SYMBOL_LIST_CHOICE,
   BACK_CHOICE,
   TODOS_CHOICE,
@@ -403,6 +404,22 @@ test("resolvePresetMenuSelection gives exit and main-menu actions priority over 
     mode: "main"
   });
   assert.deepEqual(resolvePresetMenuSelection(["acciones", EXIT_CHOICE], ["acciones", "cedears"]), { mode: "exit" });
+});
+
+test("level-two navigation actions execute with Enter without a prior checkbox selection", async () => {
+  const focused = { name: MAIN_MENU_CHOICE, enabled: false };
+  let originalSubmitCalled = false;
+  const prompt = {
+    focused,
+    submit: async () => {
+      originalSubmitCalled = true;
+    }
+  };
+
+  await enableImmediateNavigationSubmit(prompt).submit();
+
+  assert.equal(focused.enabled, true);
+  assert.equal(originalSubmitCalled, true);
 });
 
 test("resolvePresetMenuSelection expands Todos to every category, ignoring individual ticks", () => {

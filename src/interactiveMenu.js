@@ -278,17 +278,36 @@ function resolvePresetMenuSelection(picked, categoryKeys) {
   return { mode: "categories", categories: picked };
 }
 
-async function promptForInstrumentPresetMenu({ cache, menuOverrides } = {}) {
+function enableImmediateNavigationSubmit(prompt) {
+  const submit = prompt.submit.bind(prompt);
+  prompt.submit = async function submitWithImmediateNavigation() {
+    // Category rows deliberately use a checkbox flow (Space, then Enter), but
+    // these two rows are commands. Mark the focused command just before the
+    // normal MultiSelect submit logic reads its selected choices, allowing
+    // Enter to execute it directly even when no checkbox was toggled.
+    if ([MAIN_MENU_CHOICE, EXIT_CHOICE].includes(this.focused && this.focused.name)) {
+      this.focused.enabled = true;
+    }
+    return submit();
+  };
+  return prompt;
+}
+
+async function promptForInstrumentPresetMenu({
+  cache,
+  menuOverrides,
+  multiSelectPrompt = (options) => new MultiSelect(options)
+} = {}) {
   const choices = buildPresetMenuChoices(cache);
   const categoryKeys = choices
     .map((choice) => choice.name)
     .filter((name) => ![TODOS_CHOICE, CUSTOM_CHOICE, MAIN_MENU_CHOICE, EXIT_CHOICE].includes(name));
 
-  const prompt = new MultiSelect({
+  const prompt = multiSelectPrompt({
     name: "preset",
     message: "Seleccionar qué instrumentos exportar:",
     choices,
-    footer: "\n( ␣ marcar · ↵ confirmar )",
+    footer: "\n( ␣ marcar categorías · ↵ confirmar · ↵ en Volver/Salir ejecutar )",
     // Nothing starts pre-checked - the user must actively pick something.
     // Submitting empty is blocked here instead of letting it through to crash
     // later deep inside the run.
@@ -305,7 +324,7 @@ async function promptForInstrumentPresetMenu({ cache, menuOverrides } = {}) {
     ...menuOverrides
   });
 
-  const picked = await prompt.run();
+  const picked = await enableImmediateNavigationSubmit(prompt).run();
   return resolvePresetMenuSelection(picked, categoryKeys);
 }
 
@@ -445,6 +464,7 @@ module.exports = {
   buildSymbolSelectionShape,
   buildPresetMenuChoices,
   resolvePresetMenuSelection,
+  enableImmediateNavigationSubmit,
   selectionToInitialNames,
   symbolChoiceName,
   UPDATE_SYMBOL_LIST_CHOICE,
