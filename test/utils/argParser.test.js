@@ -29,6 +29,11 @@ test("parseArgs reads username/password from flags", () => {
   assert.equal(result.password, "hunter2");
 });
 
+test("parseArgs recognizes --uninstall without requiring credentials", () => {
+  const result = parseArgs(argv("--uninstall"));
+  assert.equal(result.uninstall, true);
+});
+
 test("parseArgs expands --instrumentos=all to every known instrument key", () => {
   const result = parseArgs(argv("--instrumentos=all"));
   assert.deepEqual(result.instrumentos.sort(), [...ALL_KEYS].sort());

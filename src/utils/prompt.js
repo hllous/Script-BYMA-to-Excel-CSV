@@ -19,7 +19,25 @@ async function promptToSaveToVault() {
   }).run();
 }
 
+async function promptToDeleteApplicationData(appDataDir) {
+  return new Confirm({
+    name: "deleteAppData",
+    message: `¿Eliminar todos los datos de ScriptIOLExcel en ${appDataDir}?`,
+    initial: false
+  }).run();
+}
+
+async function promptToDeleteCustomOutputDirectory(outputDirectory) {
+  return new Confirm({
+    name: "deleteCustomOutput",
+    message: `¿Eliminar también la carpeta de salida personalizada y su contenido? ${outputDirectory}`,
+    initial: false
+  }).run();
+}
+
 module.exports = {
   promptForCredentials,
-  promptToSaveToVault
+  promptToSaveToVault,
+  promptToDeleteApplicationData,
+  promptToDeleteCustomOutputDirectory
 };

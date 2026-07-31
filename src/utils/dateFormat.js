@@ -22,11 +22,10 @@ function formatFileTimestampInArgentina(date) {
     day: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
-    second: "2-digit",
     hourCycle: "h23"
   }).formatToParts(date);
   const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
-  return `${values.year}-${values.month}-${values.day}_${values.hour}-${values.minute}-${values.second}`;
+  return `${values.year}-${values.month}-${values.day}-${values.hour}-${values.minute}`;
 }
 
 module.exports = {

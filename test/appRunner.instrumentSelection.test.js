@@ -1,14 +1,26 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const {
   shouldUseInteractiveMenu,
   formatTokenToFormatos,
   buildInstrumentTargetsFromSelection,
-  buildRunId
+  buildRunId,
+  buildAvailableRunId
 } = require("../src/appRunner");
 
 test("buildRunId uses an Argentina-local, filename-friendly timestamp", () => {
-  assert.equal(buildRunId(["acciones"], new Date("2026-07-31T04:10:36.218Z")), "byma-acciones-2026-07-31_01-10-36");
+  assert.equal(buildRunId(["acciones"], new Date("2026-07-31T04:10:36.218Z")), "byma-acciones-2026-07-31-01-10");
+});
+
+test("buildAvailableRunId adds a counter instead of overwriting another run in the same minute", () => {
+  const directory = fs.mkdtempSync(path.join(os.tmpdir(), "runId-test-"));
+  const runId = "byma-acciones-2026-07-31-01-10";
+  fs.writeFileSync(path.join(directory, `${runId}.csv`), "existing", "utf8");
+
+  assert.equal(buildAvailableRunId(runId, [directory]), `${runId}-2`);
 });
 
 test("shouldUseInteractiveMenu is true when interactive and no CLI instrumentos/formato flags were given", () => {

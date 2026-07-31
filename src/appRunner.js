@@ -1,6 +1,12 @@
+const fs = require("node:fs");
 const path = require("node:path");
 const { parseArgs, printHelp } = require("./utils/argParser");
-const { promptForCredentials, promptToSaveToVault } = require("./utils/prompt");
+const {
+  promptForCredentials,
+  promptToSaveToVault,
+  promptToDeleteApplicationData,
+  promptToDeleteCustomOutputDirectory
+} = require("./utils/prompt");
 const {
   promptForOutputFormat,
   promptForOutputDirectory,
@@ -25,6 +31,7 @@ const { SymbolCacheService } = require("./services/symbolCacheService");
 const { LastSelectionService } = require("./services/lastSelectionService");
 const { RuntimePathsService } = require("./services/runtimePathsService");
 const { UserSettingsService } = require("./services/userSettingsService");
+const { uninstallExecutableData } = require("./services/uninstallService");
 
 async function main() {
   const cliOptions = parseArgs(process.argv);
@@ -34,6 +41,19 @@ async function main() {
   }
 
   const runtimePaths = new RuntimePathsService();
+  if (cliOptions.uninstall) {
+    const result = await uninstallExecutableData({
+      runtimePaths,
+      readSettings: () => readUninstallSettings(runtimePaths.settingsPath),
+      confirmAppDataDeletion: promptToDeleteApplicationData,
+      confirmCustomOutputDeletion: promptToDeleteCustomOutputDirectory
+    });
+    console.log(result.removedAppData ? "Datos locales eliminados." : "Desinstalación cancelada.");
+    if (result.removedCustomOutput) {
+      console.log("La carpeta de salida personalizada también fue eliminada.");
+    }
+    return;
+  }
   const localConfig = loadLocalConfig(runtimePaths.settingsPath);
   const options = mergeOptions(cliOptions, localConfig, { outputDir: runtimePaths.outputDir });
   const vaultService = new CredentialVaultService();
@@ -148,9 +168,13 @@ async function main() {
     const startedAtIso = startedAt.toISOString();
 
     const selectedDefinitions = instrumentTargets.map((target) => target.definition);
-    const runId = buildRunId(selectedDefinitions.map((item) => item.key), startedAt);
     const outputDir = path.resolve(options.salida || runtimePaths.outputDir);
     const diagnosticsDir = runtimePaths.diagnosticsDir;
+    settingsService.saveOutputDirectory(outputDir);
+    const runId = buildAvailableRunId(buildRunId(selectedDefinitions.map((item) => item.key), startedAt), [
+      outputDir,
+      diagnosticsDir
+    ]);
     const logger = new Logger(path.join(diagnosticsDir, `${runId}.log`));
 
     console.log(`\nCarpeta de salida: ${outputDir}`);
@@ -590,6 +614,30 @@ async function resolveCredentials(options, vaultService, { promptCredentials = p
   return candidate.credentials;
 }
 
+function readUninstallSettings(settingsPath) {
+  try {
+    return loadLocalConfig(settingsPath);
+  } catch {
+    // A malformed optional settings file must not prevent the user from
+    // removing the executable's complete local-data directory.
+    return {};
+  }
+}
+
+function buildAvailableRunId(baseRunId, directories) {
+  let candidate = baseRunId;
+  let suffix = 2;
+  while (directories.some((directory) => runArtifactsExist(directory, candidate))) {
+    candidate = `${baseRunId}-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+function runArtifactsExist(directory, runId) {
+  return [".csv", ".xlsx", "-audit.json", ".log"].some((suffix) => fs.existsSync(path.join(directory, `${runId}${suffix}`)));
+}
+
 async function resolveCredentialCandidate(options, vaultService, { promptCredentials = promptForCredentials, skipVault = false } = {}) {
   if (options.username && options.password) {
     return { credentials: { username: options.username, password: options.password }, source: "supplied" };
@@ -678,5 +726,6 @@ module.exports = {
   shouldUseInteractiveMenu,
   formatTokenToFormatos,
   buildInstrumentTargetsFromSelection,
-  buildRunId
+  buildRunId,
+  buildAvailableRunId
 };
