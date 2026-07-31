@@ -37,3 +37,17 @@ test("saveOutputDirectory persists the chosen output folder while preserving exi
     salida: "C:\\Users\\nico\\Exports"
   });
 });
+
+test("clearCredentials removes saved login details without changing the output folder", () => {
+  const filePath = makeSettingsPath();
+  fs.writeFileSync(
+    filePath,
+    JSON.stringify({ username: "nico", password: "legacy-password", salida: "C:\\Exports" }),
+    "utf8"
+  );
+  const service = new UserSettingsService({ filePath });
+
+  service.clearCredentials();
+
+  assert.deepEqual(JSON.parse(fs.readFileSync(filePath, "utf8")), { salida: "C:\\Exports" });
+});

@@ -87,11 +87,11 @@ Para quienes prefieren no instalar Node.js: en la sección [Releases](https://gi
 1. Descargar **`ScriptIOLExcel.exe`** de la última release
 2. Comparar el SHA-256 del archivo con `SHA256SUMS.txt` publicado en la release
 3. Hacer doble clic en el archivo descargado. Windows puede mostrar una advertencia porque esta versión no tiene firma digital; verificar que se descargó desde este repositorio antes de continuar.
-4. En la primera ejecución, iniciar sesión en IOL; después seleccionar instrumentos y formato de salida
-5. Antes de seleccionar instrumentos, confirmar o cambiar la carpeta de salida. La ruta se muestra nuevamente junto a cada archivo generado.
+4. En el menú inicial, elegir **Iniciar ScriptIOLExcel**, cambiar la carpeta de salida, cerrar la sesión guardada de IOL, eliminar los datos locales o salir.
+5. En la primera ejecución, iniciar sesión en IOL; después seleccionar instrumentos y formato de salida. El selector de formatos usa **Espacio** para elegir uno y **Enter** para continuar.
 6. Por defecto, los CSV/XLSX se guardan en **`%LOCALAPPDATA%\ScriptIOLExcel\output\`** y los logs/auditorías en **`%LOCALAPPDATA%\ScriptIOLExcel\diagnostics\`**.
 
-Al abrir el ejecutable, el primer menú ofrece **"Eliminar datos de la aplicación"**. Se pide confirmación antes de eliminar `%LOCALAPPDATA%\ScriptIOLExcel\`. Si se eligió otra carpeta de salida, se pregunta por separado si también se desea eliminarla.
+El menú de instrumentos permite volver al menú principal o salir. Después de una exportación también se puede volver al selector, volver al menú principal, cerrar sesión o salir. Se pide confirmación antes de eliminar `%LOCALAPPDATA%\ScriptIOLExcel\`. Si se eligió otra carpeta de salida, se pregunta por separado si también se desea eliminarla.
 
 No hace falta instalar Node.js ni ejecutar `npm install` — el `.exe` ya incluye todo lo necesario.
 
@@ -236,11 +236,11 @@ If you'd rather not install Node.js at all, the [Releases](https://github.com/hl
 1. Download **`ScriptIOLExcel.exe`** from the latest release
 2. Compare the file's SHA-256 with the `SHA256SUMS.txt` published with the release
 3. Double-click the downloaded file. Windows may show a warning because this version is not digitally signed; verify it came from this repository before continuing.
-4. On the first run, sign in to IOL; then choose instruments and an output format
-5. Before choosing instruments, confirm or change the output folder. The path is shown again for every generated file.
+4. From the startup menu, choose **Iniciar ScriptIOLExcel**, change the output folder, log out the saved IOL account, remove local data, or exit.
+5. On the first run, sign in to IOL; then choose instruments and an output format. The format picker uses **Space** to select one option and **Enter** to continue.
 6. By default, CSV/XLSX files are saved under **`%LOCALAPPDATA%\ScriptIOLExcel\output\`**, while logs and audits are saved under **`%LOCALAPPDATA%\ScriptIOLExcel\diagnostics\`**.
 
-When opening the executable, the first menu offers **"Eliminar datos de la aplicación"**. It asks for confirmation before removing `%LOCALAPPDATA%\ScriptIOLExcel\`. If a different output folder was chosen, it asks separately whether that folder should also be deleted.
+The instrument menu lets the user return to the startup menu or exit. After an export, users can also return to the picker, return to the startup menu, log out, or exit. Confirmation is required before removing `%LOCALAPPDATA%\ScriptIOLExcel\`. If a different output folder was chosen, it is asked separately whether that folder should also be deleted.
 
 No Node.js install or `npm install` required — the `.exe` already bundles everything it needs.
 

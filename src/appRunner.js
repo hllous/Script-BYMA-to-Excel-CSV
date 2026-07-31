@@ -14,7 +14,11 @@ const {
   promptForSymbolSelectionWithReuse,
   promptForInstrumentSelection,
   promptForPostRunAction,
+  START_CHOICE,
+  CHANGE_OUTPUT_CHOICE,
+  LOGOUT_CHOICE,
   UNINSTALL_CHOICE,
+  EXIT_CHOICE,
   BACK_CHOICE
 } = require("./interactiveMenu");
 const { loadLocalConfig } = require("./utils/configLoader");
@@ -44,20 +48,17 @@ async function main() {
 
   const runtimePaths = new RuntimePathsService();
   if (shouldShowExecutableStartupMenu(cliOptions, runtimePaths)) {
-    printHomeBanner();
-    const startupAction = await promptForStartupAction();
-    if (startupAction === UNINSTALL_CHOICE) {
-      await runUninstallFlow(runtimePaths);
+    const shouldStart = await runExecutableStartupMenu(runtimePaths, cliOptions);
+    if (!shouldStart) {
       return;
     }
-    console.clear();
   }
   const localConfig = loadLocalConfig(runtimePaths.settingsPath);
   const options = mergeOptions(cliOptions, localConfig, { outputDir: runtimePaths.outputDir });
   const vaultService = new CredentialVaultService();
   const settingsService = runtimePaths.isPackaged
     ? new UserSettingsService({ filePath: runtimePaths.settingsPath })
-    : { saveUsername: () => {}, saveOutputDirectory: () => {} };
+    : { saveUsername: () => {}, saveOutputDirectory: () => {}, clearCredentials: () => {} };
   const startupLogger = new Logger(path.join(runtimePaths.diagnosticsDir, "startup.log"));
   const session = await authenticateBeforeSelection(options, {
     vaultService,
@@ -68,7 +69,10 @@ async function main() {
   options.password = session.credentials.password;
 
   const useInteractiveMenu = shouldUseInteractiveMenu(options, cliOptions);
-  if (useInteractiveMenu) {
+  // The packaged executable changes this setting from its first-level menu so
+  // it is available before authentication. The development/run.bat workflow
+  // keeps its existing in-flow prompt.
+  if (useInteractiveMenu && !runtimePaths.isPackaged) {
     options.salida = await promptForOutputDirectory(options.salida);
     settingsService.saveOutputDirectory(options.salida);
   }
@@ -128,8 +132,18 @@ async function main() {
           // Saved immediately (not deferred to process exit) so that whatever
           // was last picked in this session is what a future run offers to
           // reuse - promptForSymbolSelectionWithReuse already does this same
-          // write for the first-ever selection above.
-          lastSelectionService.writeSelection(selection);
+          // write for the first-ever selection above. Navigation requests are
+          // deliberately not selections and must never replace that history.
+          if (!selection.mainMenu && !selection.exit) {
+            lastSelectionService.writeSelection(selection);
+          }
+        }
+
+        if (selection.mainMenu) {
+          return main();
+        }
+        if (selection.exit) {
+          return;
         }
 
         formatoToken = await promptForOutputFormat({ allowBack: true });
@@ -285,9 +299,6 @@ async function main() {
     for (const filePath of createdFiles) {
       console.log(`  - ${filePath}`);
     }
-    console.log(`\nLogs y auditoría: ${diagnosticsDir}`);
-    console.log(`  - ${auditPath}`);
-
     if (allFailures.length > 0) {
       console.log("Símbolos con error:");
       for (const failure of allFailures) {
@@ -301,6 +312,11 @@ async function main() {
       if (postRunAction === "menu") {
         console.clear();
         keepRunning = true;
+      } else if (postRunAction === "main-menu") {
+        return main();
+      } else if (postRunAction === LOGOUT_CHOICE) {
+        await logOutAccount(vaultService, settingsService, options.username);
+        return main();
       }
     }
   }
@@ -335,6 +351,56 @@ function shouldShowExecutableStartupMenu(cliOptions, runtimePaths) {
     cliOptions.instrumentos === null &&
     cliOptions.formatos === null
   );
+}
+
+async function runExecutableStartupMenu(runtimePaths, cliOptions) {
+  const settingsService = new UserSettingsService({ filePath: runtimePaths.settingsPath });
+  const vaultService = new CredentialVaultService();
+
+  for (;;) {
+    printHomeBanner();
+    const startupAction = await promptForStartupAction();
+
+    if (startupAction === START_CHOICE) {
+      console.clear();
+      return true;
+    }
+
+    if (startupAction === EXIT_CHOICE) {
+      return false;
+    }
+
+    if (startupAction === UNINSTALL_CHOICE) {
+      await runUninstallFlow(runtimePaths);
+      return false;
+    }
+
+    if (startupAction === CHANGE_OUTPUT_CHOICE) {
+      const savedSettings = readUninstallSettings(runtimePaths.settingsPath);
+      const savedOptions = mergeOptions(cliOptions, savedSettings, { outputDir: runtimePaths.outputDir });
+      const selectedOutputDir = await promptForOutputDirectory(savedOptions.salida);
+      settingsService.saveOutputDirectory(selectedOutputDir);
+      console.clear();
+      continue;
+    }
+
+    if (startupAction === LOGOUT_CHOICE) {
+      await logOutAccount(vaultService, settingsService, settingsService.getUsername());
+      continue;
+    }
+  }
+}
+
+async function logOutAccount(vaultService, settingsService, username) {
+  if (!username) {
+    console.log("No hay una sesión de IOL guardada en este equipo.");
+    return false;
+  }
+
+  vaultService.deletePassword(username);
+  settingsService.clearCredentials();
+  console.log("La sesión guardada de IOL fue cerrada. Se solicitarán credenciales al iniciar nuevamente.");
+  return true;
 }
 
 async function runUninstallFlow(runtimePaths) {
