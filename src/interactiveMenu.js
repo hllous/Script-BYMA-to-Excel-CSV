@@ -61,7 +61,7 @@ async function promptForOutputFormat({
     { name: "xlsx", message: "Solo XLSX" }
   ];
   if (allowBack) {
-    choices.push({ name: BACK_CHOICE, message: "Volver a seleccionar instrumentos" });
+    choices.push({ name: BACK_CHOICE, message: "Volver a seleccionar instrumentos", indicator: "", pad: " " });
   }
 
   const prompt = multiSelectPrompt({
@@ -260,8 +260,8 @@ function buildPresetMenuChoices(cache) {
     { name: TODOS_CHOICE, message: "Todos" },
     ...categoryChoices,
     { name: CUSTOM_CHOICE, message: "Custom (elegir símbolos específicos)" },
-    { name: MAIN_MENU_CHOICE, message: "Volver al menú principal" },
-    { name: EXIT_CHOICE, message: "Salir" }
+    { name: MAIN_MENU_CHOICE, message: "Volver al menú principal", indicator: "", pad: " " },
+    { name: EXIT_CHOICE, message: "Salir", indicator: "", pad: " " }
   ];
 }
 

@@ -104,6 +104,20 @@ test("promptForOutputFormat requires one space-selected format before Enter cont
   assert.equal(receivedOptions.validate(["csv"]), true);
 });
 
+test("output-format back action is rendered without a checkbox indicator", async () => {
+  let receivedOptions;
+  await promptForOutputFormat({
+    allowBack: true,
+    multiSelectPrompt: (options) => {
+      receivedOptions = options;
+      return { submit: async () => {}, run: async () => [BACK_CHOICE] };
+    }
+  });
+
+  const backChoice = receivedOptions.choices.find((choice) => choice.name === BACK_CHOICE);
+  assert.equal(backChoice.indicator, "");
+});
+
 const CACHE = {
   categories: {
     acciones: [
@@ -422,6 +436,14 @@ test("buildPresetMenuChoices lists categories and navigation choices", () => {
 test("buildPresetMenuChoices omits categories with zero symbols", () => {
   const choices = buildPresetMenuChoices(CACHE);
   assert.ok(!choices.some((c) => c.name === "fci" || c.name === "etfs"));
+});
+
+test("buildPresetMenuChoices renders navigation commands without checkbox indicators", () => {
+  const choices = buildPresetMenuChoices(CACHE);
+
+  for (const name of [MAIN_MENU_CHOICE, EXIT_CHOICE]) {
+    assert.equal(choices.find((choice) => choice.name === name).indicator, "");
+  }
 });
 
 test("resolvePresetMenuSelection routes to custom when Custom is ticked, ignoring any other ticks", () => {
