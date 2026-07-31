@@ -22,6 +22,8 @@ const { ExportService } = require("./services/exportService");
 const { CredentialVaultService } = require("./services/credentialVaultService");
 const { SymbolCacheService } = require("./services/symbolCacheService");
 const { LastSelectionService } = require("./services/lastSelectionService");
+const { RuntimePathsService } = require("./services/runtimePathsService");
+const { UserSettingsService } = require("./services/userSettingsService");
 
 async function main() {
   const cliOptions = parseArgs(process.argv);
@@ -30,13 +32,32 @@ async function main() {
     return;
   }
 
-  const localConfig = loadLocalConfig(path.resolve(process.cwd(), "config.local.json"));
-  const options = mergeOptions(cliOptions, localConfig);
+  const runtimePaths = new RuntimePathsService();
+  const localConfig = loadLocalConfig(runtimePaths.settingsPath);
+  const options = mergeOptions(cliOptions, localConfig, { outputDir: runtimePaths.outputDir });
   const vaultService = new CredentialVaultService();
+  const settingsService = runtimePaths.isPackaged
+    ? new UserSettingsService({ filePath: runtimePaths.settingsPath })
+    : { saveUsername: () => {} };
+  const startupLogger = new Logger(path.join(runtimePaths.outputDir, "startup.log"));
+  const session = await authenticateBeforeSelection(options, {
+    vaultService,
+    settingsService,
+    createServices: (credentials) => buildIolServices(options, credentials, startupLogger)
+  });
+  options.username = session.credentials.username;
+  options.password = session.credentials.password;
 
   const useInteractiveMenu = shouldUseInteractiveMenu(options, cliOptions);
-  const symbolCacheService = useInteractiveMenu ? new SymbolCacheService({}) : null;
-  const lastSelectionService = useInteractiveMenu ? new LastSelectionService({}) : null;
+  const symbolCacheService = useInteractiveMenu
+    ? new SymbolCacheService({
+        authService: session.authService,
+        discoveryService: session.discoveryService,
+        cachePath: runtimePaths.symbolCachePath,
+        logger: startupLogger
+      })
+    : null;
+  const lastSelectionService = useInteractiveMenu ? new LastSelectionService({ filePath: runtimePaths.lastSelectionPath }) : null;
 
   let keepRunning = true;
   // Only the very first instrument selection of this process may offer to reuse
@@ -73,13 +94,13 @@ async function main() {
           selection = await promptForSymbolSelectionWithReuse({
             cache,
             lastSelectionService,
-            onUpdateSymbolList: () => refreshSymbolCacheInteractively(options, vaultService)
+            onUpdateSymbolList: () => refreshSymbolCacheInteractively(options, symbolCacheService, session, startupLogger)
           });
           hasPromptedThisSession = true;
         } else {
           selection = await promptForInstrumentSelection({
             cache,
-            onUpdateSymbolList: () => refreshSymbolCacheInteractively(options, vaultService)
+            onUpdateSymbolList: () => refreshSymbolCacheInteractively(options, symbolCacheService, session, startupLogger)
           });
           // Saved immediately (not deferred to process exit) so that whatever
           // was last picked in this session is what a future run offers to
@@ -123,22 +144,14 @@ async function main() {
 
     const selectedDefinitions = instrumentTargets.map((target) => target.definition);
     const runId = buildRunId(selectedDefinitions.map((item) => item.key), startedAtIso);
-    const outputDir = path.resolve(process.cwd(), options.salida || DEFAULTS.outputDir);
+    const outputDir = path.resolve(options.salida || runtimePaths.outputDir);
     const logger = new Logger(path.join(outputDir, `${runId}.log`));
 
     logger.info("Inicio de ejecución");
     logger.info(`Instrumentos solicitados: ${selectedDefinitions.map((item) => item.key).join(",")}`);
 
-    const credentials = await resolveCredentials(options, vaultService);
-    if (!credentials.username || !credentials.password) {
-      throw new Error("No hay credenciales de IOL. Use args, variables de entorno o config.local.json");
-    }
-    // Persist whatever was resolved so a subsequent loop iteration (picking "Volver al
-    // menu" after a run) doesn't prompt for credentials again.
-    options.username = credentials.username;
-    options.password = credentials.password;
-
-    const { authService, iolHttpClient, discoveryService } = buildIolServices(options, credentials, logger);
+    setSessionLogger(session, logger);
+    const { authService, iolHttpClient, discoveryService } = session;
     const aggregationService = new QuoteAggregationService({ iolHttpClient, logger });
     const exportService = new ExportService({ outputDir, logger });
 
@@ -279,6 +292,12 @@ function buildIolServices(options, credentials, logger) {
   return { authService, iolHttpClient, discoveryService };
 }
 
+function setSessionLogger(session, logger) {
+  session.authService.logger = logger;
+  session.iolHttpClient.logger = logger;
+  session.discoveryService.logger = logger;
+}
+
 // Per spec: the searchable symbol picker + last-selection reuse + format step only take
 // over when nothing was already decided via CLI flags (used by run.bat's :RUN_DIRECT
 // passthrough and by scripted/headless invocations).
@@ -298,8 +317,10 @@ function buildInstrumentTargetsFromSelection(selection, cache) {
   for (const key of selection.categories) {
     const definition = INSTRUMENT_DEFINITIONS.find((item) => item.key === key);
     if (!definition) continue;
+    const cachedSymbols = cache.categories[key];
+    if (!Array.isArray(cachedSymbols) || cachedSymbols.length === 0) continue;
 
-    const symbolRecords = (cache.categories[key] || []).map((symbol) => ({
+    const symbolRecords = cachedSymbols.map((symbol) => ({
       simbolo: symbol.simbolo,
       descripcion: symbol.descripcion,
       mercado: null,
@@ -311,12 +332,13 @@ function buildInstrumentTargetsFromSelection(selection, cache) {
   for (const { category, simbolo } of selection.symbols) {
     const definition = INSTRUMENT_DEFINITIONS.find((item) => item.key === category);
     if (!definition) continue;
+    const cacheEntry = (cache.categories[category] || []).find((symbol) => symbol.simbolo === simbolo);
+    if (!cacheEntry) continue;
 
     if (!plan.has(category)) {
       plan.set(category, { definition, symbolRecords: [] });
     }
 
-    const cacheEntry = (cache.categories[category] || []).find((symbol) => symbol.simbolo === simbolo);
     plan.get(category).symbolRecords.push({
       simbolo,
       descripcion: cacheEntry ? cacheEntry.descripcion : null,
@@ -328,25 +350,12 @@ function buildInstrumentTargetsFromSelection(selection, cache) {
   return Array.from(plan.values());
 }
 
-// Triggered from within the picker's "Update symbol list from IOL" action. Resolves its
-// own credentials/login/discovery rather than reusing the main run's (not yet resolved
-// at this point in the flow) so the picker can refresh mid-selection. Mutates `options`
-// with whatever credentials it resolves so the main resolveCredentials() call right
-// after the picker doesn't prompt the user a second time.
-async function refreshSymbolCacheInteractively(options, vaultService) {
-  const outputDir = path.resolve(process.cwd(), options.salida || DEFAULTS.outputDir);
-  const logger = new Logger(path.join(outputDir, "symbol-cache-update.log"));
-
-  const credentials = await resolveCredentials(options, vaultService);
-  if (!credentials.username || !credentials.password) {
-    throw new Error("No hay credenciales de IOL para actualizar la lista de símbolos.");
-  }
-  options.username = credentials.username;
-  options.password = credentials.password;
-
-  const { authService, discoveryService } = buildIolServices(options, credentials, logger);
-  const symbolCacheService = new SymbolCacheService({ authService, discoveryService, logger });
-
+// Triggered from the picker's "Update symbol list from IOL" action. It reuses the
+// already authenticated session created before the picker, so refresh neither prompts
+// again nor creates a second login/client stack.
+async function refreshSymbolCacheInteractively(options, symbolCacheService, session, logger) {
+  setSessionLogger(session, logger);
+  symbolCacheService.logger = logger;
   return symbolCacheService.refreshSymbolCache({
     pais: options.pais,
     panel: options.panel,
@@ -355,7 +364,7 @@ async function refreshSymbolCacheInteractively(options, vaultService) {
   });
 }
 
-function mergeOptions(cliOptions, localConfig) {
+function mergeOptions(cliOptions, localConfig, { outputDir = DEFAULTS.outputDir } = {}) {
   const config = localConfig || {};
   const defaultInstruments = INSTRUMENT_DEFINITIONS.map((item) => item.key);
 
@@ -368,7 +377,7 @@ function mergeOptions(cliOptions, localConfig) {
     pais: firstDefined(cliOptions.pais, config.pais, DEFAULTS.pais),
     panel: firstDefined(cliOptions.panel, config.panel, DEFAULTS.panel),
     formatos: firstDefinedArray(cliOptions.formatos, config.formatos, DEFAULTS.formatos),
-    salida: firstDefined(cliOptions.salida, config.salida, DEFAULTS.outputDir),
+    salida: firstDefined(cliOptions.salida, config.salida, outputDir),
     pageSize: firstDefined(cliOptions.pageSize, config.pageSize, DEFAULTS.pageSize),
     maxPages: firstDefined(cliOptions.maxPages, config.maxPages, DEFAULTS.maxPages),
     concurrency: firstDefined(cliOptions.concurrency, config.concurrency, DEFAULTS.concurrency),
@@ -559,43 +568,85 @@ function buildArgentinaTime(argentinaLocalDate, minutesOfDay) {
   return new Date(utcMs);
 }
 
-// Precedence: CLI args / config.local.json (options.username+password) > OS credential
-// vault (looked up by username) > interactive masked prompt (offers to save to the vault).
-async function resolveCredentials(options, vaultService) {
+// Precedence: CLI args / settings file (options.username+password) > OS credential
+// vault (looked up by username) > interactive masked prompt. Persistence happens only
+// after authenticateBeforeSelection has confirmed the credentials with IOL.
+async function resolveCredentials(options, vaultService, { promptCredentials = promptForCredentials, skipVault = false } = {}) {
+  const candidate = await resolveCredentialCandidate(options, vaultService, { promptCredentials, skipVault });
+  return candidate.credentials;
+}
+
+async function resolveCredentialCandidate(options, vaultService, { promptCredentials = promptForCredentials, skipVault = false } = {}) {
   if (options.username && options.password) {
-    return {
-      username: options.username,
-      password: options.password
-    };
+    return { credentials: { username: options.username, password: options.password }, source: "supplied" };
   }
 
-  if (options.username) {
+  if (options.username && !skipVault) {
     const vaultPassword = vaultService.getPassword(options.username);
     if (vaultPassword) {
-      return {
-        username: options.username,
-        password: vaultPassword
-      };
+      return { credentials: { username: options.username, password: vaultPassword }, source: "vault" };
     }
   }
 
   if (!options.interactive) {
-    return {
-      username: options.username,
-      password: options.password
-    };
+    return { credentials: { username: options.username, password: options.password }, source: "unavailable" };
   }
 
-  const credentials = await promptForCredentials(options.username, options.password);
+  return { credentials: await promptCredentials(options.username, options.password), source: "prompted" };
+}
 
-  if (credentials.username && credentials.password) {
-    const shouldSave = await promptToSaveToVault();
-    if (shouldSave) {
-      vaultService.setPassword(credentials.username, credentials.password);
+async function authenticateBeforeSelection(
+  options,
+  {
+    vaultService,
+    settingsService,
+    promptCredentials = promptForCredentials,
+    promptSaveToVault = promptToSaveToVault,
+    createServices,
+    reportAuthenticationError = (error) => console.error(`No se pudo iniciar sesión en IOL: ${error.message}`)
+  }
+) {
+  let candidateOptions = { ...options };
+  let skipVault = false;
+
+  for (;;) {
+    const candidate = await resolveCredentialCandidate(candidateOptions, vaultService, { promptCredentials, skipVault });
+    const { credentials } = candidate;
+    if (!credentials.username || !credentials.password) {
+      throw new Error("No hay credenciales de IOL. Use args, variables de entorno o complete el inicio de sesión.");
     }
-  }
 
-  return credentials;
+    const services = createServices(credentials);
+    try {
+      await services.authService.getAccessToken();
+    } catch (error) {
+      if (!options.interactive || !isCredentialRejection(error)) {
+        throw error;
+      }
+      reportAuthenticationError(error);
+      // A rejected username is just as likely as a rejected password. Clear both
+      // values so the next prompt is a complete credential retry rather than an
+      // endless password-only retry against the same account.
+      candidateOptions = { ...candidateOptions, username: null, password: null };
+      skipVault = true;
+      continue;
+    }
+
+    settingsService.saveUsername(credentials.username);
+    if (candidate.source === "prompted") {
+      const shouldSave = await promptSaveToVault();
+      if (shouldSave) {
+        vaultService.setPassword(credentials.username, credentials.password);
+      }
+    }
+
+    return { credentials, ...services };
+  }
+}
+
+function isCredentialRejection(error) {
+  const status = error && error.response ? error.response.status : null;
+  return [400, 401, 403].includes(status);
 }
 
 if (require.main === module) {
@@ -608,6 +659,8 @@ if (require.main === module) {
 module.exports = {
   applyCalculatedImplicitCcl,
   resolveCredentials,
+  authenticateBeforeSelection,
+  refreshSymbolCacheInteractively,
   shouldUseInteractiveMenu,
   formatTokenToFormatos,
   buildInstrumentTargetsFromSelection

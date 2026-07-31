@@ -1,13 +1,15 @@
 {
   "name": "script-iol-excel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Recolector BYMA con IOL API para exportar CSV/XLSX",
   "main": "src/appRunner.js",
   "scripts": {
     "start": "node src/appRunner.js",
     "help": "node src/appRunner.js --help",
     "test": "node --test",
-    "build:exe": "node scripts/build-exe.js"
+    "build:exe": "node scripts/build-exe.js",
+    "build:release": "node scripts/release-exe.js",
+    "publish:release": "node scripts/release-exe.js --publish"
   },
   "keywords": [
     "iol",
@@ -19,7 +21,7 @@
   "license": "MIT",
   "dependencies": {
     "@napi-rs/keyring": "^1.3.0",
-    "axios": "^1.14.0",
+    "axios": "^1.19.0",
     "enquirer": "^2.4.1",
     "xlsx": "^0.18.5"
   },

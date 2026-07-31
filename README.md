@@ -85,9 +85,10 @@ cp config.local.example.json config.local.json
 Para quienes prefieren no instalar Node.js: en la sección [Releases](https://github.com/hllous/Script-BYMA-to-Excel-CSV/releases/latest) del repositorio hay un ejecutable de Windows listo para usar.
 
 1. Descargar **`ScriptIOLExcel.exe`** de la última release
-2. Hacer doble clic en el archivo descargado
-3. Seguir los mismos pasos que en el Modo Fácil (seleccionar instrumentos, formato de salida, credenciales de IOL)
-4. Los archivos generados quedan en la carpeta **`output/`**, al lado del `.exe`
+2. Verificar la firma digital y el checksum publicados en la release
+3. Hacer doble clic en el archivo descargado
+4. En la primera ejecución, iniciar sesión en IOL; después seleccionar instrumentos y formato de salida
+5. Los archivos generados, preferencias y caché quedan en **`%LOCALAPPDATA%\ScriptIOLExcel\`**
 
 No hace falta instalar Node.js ni ejecutar `npm install` — el `.exe` ya incluye todo lo necesario.
 
@@ -228,9 +229,10 @@ cp config.local.example.json config.local.json
 If you'd rather not install Node.js at all, the [Releases](https://github.com/hllous/Script-BYMA-to-Excel-CSV/releases/latest) section of the repository has a ready-to-run Windows executable.
 
 1. Download **`ScriptIOLExcel.exe`** from the latest release
-2. Double-click the downloaded file
-3. Follow the same steps as Easy Mode (pick instruments, output format, IOL credentials)
-4. The generated files land in the **`output/`** folder, next to the `.exe`
+2. Verify the digital signature and checksum published with the release
+3. Double-click the downloaded file
+4. On the first run, sign in to IOL; then choose instruments and an output format
+5. Generated files, preferences, and the cache are stored in **`%LOCALAPPDATA%\ScriptIOLExcel\`**
 
 No Node.js install or `npm install` required — the `.exe` already bundles everything it needs.
 

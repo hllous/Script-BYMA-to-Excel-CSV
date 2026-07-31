@@ -69,6 +69,29 @@ test("selectionToInitialNames returns undefined for empty/missing selection", ()
   assert.equal(selectionToInitialNames({ categories: [], symbols: [] }), undefined);
 });
 
+test("selectionToInitialNames drops selections that disappeared from a refreshed cache", () => {
+  const refreshedCache = {
+    categories: {
+      acciones: [{ simbolo: "GGAL", descripcion: "Grupo Financiero Galicia" }],
+      cedears: []
+    }
+  };
+
+  assert.deepEqual(
+    selectionToInitialNames(
+      {
+        categories: ["cedears"],
+        symbols: [
+          { category: "acciones", simbolo: "GGAL" },
+          { category: "acciones", simbolo: "REMOVED" }
+        ]
+      },
+      refreshedCache
+    ),
+    ["acciones::GGAL"]
+  );
+});
+
 test("symbolChoiceName namespaces by category to avoid cross-category collisions", () => {
   assert.equal(symbolChoiceName("acciones", "GGAL"), "acciones::GGAL");
 });
@@ -371,6 +394,33 @@ test("promptForInstrumentSelection returns to the preset menu when the custom pi
   assert.equal(menuCalls, 2);
   assert.equal(customCalls, 1);
   assert.deepEqual(result, { categories: ["bonos"], symbols: [] });
+});
+
+test("promptForInstrumentSelection keeps a refreshed cache when backing out to the preset menu", async () => {
+  const staleCache = { categories: { acciones: [{ simbolo: "OLD", descripcion: "Old" }] } };
+  const freshCache = { categories: { acciones: [{ simbolo: "NEW", descripcion: "New" }] } };
+  const menuCaches = [];
+  let menuCalls = 0;
+  const presetMenu = async ({ cache }) => {
+    menuCaches.push(cache);
+    menuCalls += 1;
+    return menuCalls === 1 ? { mode: "custom" } : { mode: "categories", categories: ["acciones"] };
+  };
+  const customPicker = async ({ cache, onUpdateSymbolList }) => {
+    assert.equal(cache, staleCache);
+    assert.equal(await onUpdateSymbolList(), freshCache);
+    return { back: true };
+  };
+
+  const result = await promptForInstrumentSelection({
+    cache: staleCache,
+    onUpdateSymbolList: async () => freshCache,
+    presetMenu,
+    customPicker
+  });
+
+  assert.deepEqual(result, { categories: ["acciones"], symbols: [] });
+  assert.deepEqual(menuCaches, [staleCache, freshCache]);
 });
 
 test("promptForInstrumentSelection throws without a symbol cache", async () => {
