@@ -70,16 +70,6 @@ cd Script-BYMA-to-Excel-CSV
 npm install
 ```
 
-#### ⚙️ Configuración opcional
-
-Para no ingresar el usuario de IOL en cada corrida, copiar `config.local.example.json` como `config.local.json` y completar el usuario y los valores por defecto:
-
-```bash
-cp config.local.example.json config.local.json
-```
-
-`config.local.json` está en `.gitignore` y nunca se sube al repositorio. La contraseña **no** se guarda en este archivo: se pide una vez de forma enmascarada y, si se acepta, queda guardada en el almacén de credenciales de Windows para las próximas corridas.
-
 #### 🟢 Modo Fácil (`run.bat`)
 
 1. Hacer doble clic en el archivo **`run.bat`**
@@ -215,16 +205,6 @@ git clone https://github.com/hllous/Script-BYMA-to-Excel-CSV.git
 cd Script-BYMA-to-Excel-CSV
 npm install
 ```
-
-#### ⚙️ Optional configuration
-
-To avoid entering your IOL username on every run, copy `config.local.example.json` to `config.local.json` and fill in your username and default values:
-
-```bash
-cp config.local.example.json config.local.json
-```
-
-`config.local.json` is in `.gitignore` and is never committed to the repo. Your password is **not** stored in this file: it's requested once with masked input, and if you opt in, it's saved to the Windows credential store for future runs.
 
 #### 🟢 Easy Mode (`run.bat`)
 
