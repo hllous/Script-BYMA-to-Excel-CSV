@@ -41,6 +41,7 @@ test("promptForStartupAction exposes all executable menu actions", async () => {
     "uninstall",
     EXIT_CHOICE
   ]);
+  assert.equal(receivedOptions.choicesHeader, " ");
 });
 
 test("promptForOutputDirectory shows the current folder and resolves a custom selection", async () => {

@@ -24,6 +24,7 @@ async function promptForStartupAction({ selectPrompt = (options) => new Select(o
       { name: UNINSTALL_CHOICE, message: "Eliminar datos de la aplicación" },
       { name: EXIT_CHOICE, message: "Salir" }
     ],
+    choicesHeader: " ",
     footer: "\n( ↑↓ mover · ↵ confirmar )"
   });
   return prompt.run();
