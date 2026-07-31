@@ -317,10 +317,6 @@ async function main() {
       } else if (postRunAction === "main-menu") {
         console.clear();
         return main();
-      } else if (postRunAction === LOGOUT_CHOICE) {
-        await logOutAccount(vaultService, settingsService, options.username);
-        console.clear();
-        return main();
       }
     }
   }
