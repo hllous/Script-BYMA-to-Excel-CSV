@@ -20,6 +20,12 @@ function getSigningConfiguration(env) {
   };
 }
 
+function getUnsignedReleaseConfiguration(env) {
+  if (env.ALLOW_UNSIGNED_RELEASE !== "true") {
+    throw new Error("Una release sin firma requiere ALLOW_UNSIGNED_RELEASE=true.");
+  }
+}
+
 function signAndVerifyExecutable(exePath, signing, { execFile = execFileSync } = {}) {
   execFile(
     signing.signToolPath,
@@ -105,6 +111,16 @@ function buildSignedRelease({
   return { exePath, checksumPath };
 }
 
+function buildUnsignedRelease({ runTests = runReleaseTests, runSmoke = smokePackagedExecutable, build = buildExecutable } = {}) {
+  const { exePath } = build();
+  runTests();
+  runSmoke(exePath);
+  const checksumPath = writeChecksum(exePath);
+  console.warn(`Release SIN FIRMA creada: ${exePath}`);
+  console.warn(`Checksum: ${checksumPath}`);
+  return { exePath, checksumPath };
+}
+
 function getPublishConfiguration(env) {
   const required = ["RELEASE_TAG", "RELEASE_TITLE", "RELEASE_NOTES_FILE"];
   const missing = required.filter((key) => !env[key]);
@@ -119,6 +135,15 @@ function getPublishConfiguration(env) {
 }
 
 function publishSignedRelease({ env = process.env, buildRelease = buildSignedRelease, execFile = execFileSync } = {}) {
+  return publishRelease({ env, buildRelease, execFile });
+}
+
+function publishUnsignedRelease({ env = process.env, buildRelease = buildUnsignedRelease, execFile = execFileSync } = {}) {
+  getUnsignedReleaseConfiguration(env);
+  return publishRelease({ env, buildRelease, execFile });
+}
+
+function publishRelease({ env, buildRelease, execFile }) {
   const publish = getPublishConfiguration(env);
   const { exePath, checksumPath } = buildRelease();
   execFile(
@@ -139,8 +164,14 @@ function publishSignedRelease({ env = process.env, buildRelease = buildSignedRel
 }
 
 if (require.main === module) {
-  if (process.argv.includes("--publish")) {
+  const isUnsigned = process.argv.includes("--unsigned");
+  if (process.argv.includes("--publish") && isUnsigned) {
+    publishUnsignedRelease();
+  } else if (process.argv.includes("--publish")) {
     publishSignedRelease();
+  } else if (isUnsigned) {
+    getUnsignedReleaseConfiguration(process.env);
+    buildUnsignedRelease();
   } else {
     buildSignedRelease();
   }
@@ -148,11 +179,14 @@ if (require.main === module) {
 
 module.exports = {
   getSigningConfiguration,
+  getUnsignedReleaseConfiguration,
   signAndVerifyExecutable,
   writeChecksum,
   runReleaseTests,
   smokePackagedExecutable,
   buildSignedRelease,
+  buildUnsignedRelease,
   getPublishConfiguration,
-  publishSignedRelease
+  publishSignedRelease,
+  publishUnsignedRelease
 };

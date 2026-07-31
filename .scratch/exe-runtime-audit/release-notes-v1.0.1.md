@@ -2,8 +2,8 @@
 
 ### Agregado
 
-- Ejecutable de Windows firmado digitalmente, con marca de tiempo y archivo `SHA256SUMS.txt` para verificar la descarga.
-- Proceso de release que prueba el ejecutable empaquetado desde una carpeta de trabajo distinta antes de firmarlo y publicarlo.
+- Archivo `SHA256SUMS.txt` para verificar la descarga del ejecutable.
+- Proceso de release que prueba el ejecutable empaquetado desde una carpeta de trabajo distinta antes de publicarlo.
 
 ### Cambiado
 
@@ -21,8 +21,9 @@
 ### Instalación
 
 1. Descargar `ScriptIOLExcel.exe` y `SHA256SUMS.txt` de los archivos adjuntos a esta release.
-2. Verificar la firma digital de `ScriptIOLExcel.exe` y comparar su SHA-256 con `SHA256SUMS.txt`.
-3. Ejecutar `ScriptIOLExcel.exe` y seguir el inicio de sesión de IOL.
+2. Comparar el SHA-256 de `ScriptIOLExcel.exe` con `SHA256SUMS.txt`.
+3. La versión no está firmada digitalmente: verificar que se descargó desde este repositorio antes de continuar ante una advertencia de Windows.
+4. Ejecutar `ScriptIOLExcel.exe` y seguir el inicio de sesión de IOL.
 
 ---
 
@@ -30,8 +31,8 @@
 
 ### Added
 
-- Digitally signed Windows executable with a timestamp and a `SHA256SUMS.txt` file for download verification.
-- Release process that tests the packaged executable from a separate working directory before signing and publishing it.
+- `SHA256SUMS.txt` file for executable download verification.
+- Release process that tests the packaged executable from a separate working directory before publishing it.
 
 ### Changed
 
@@ -49,5 +50,6 @@
 ### Installation
 
 1. Download `ScriptIOLExcel.exe` and `SHA256SUMS.txt` from this release's assets.
-2. Verify the digital signature of `ScriptIOLExcel.exe` and compare its SHA-256 with `SHA256SUMS.txt`.
-3. Run `ScriptIOLExcel.exe` and follow the IOL sign-in flow.
+2. Compare the SHA-256 of `ScriptIOLExcel.exe` with `SHA256SUMS.txt`.
+3. This version is not digitally signed: verify it came from this repository before proceeding past a Windows warning.
+4. Run `ScriptIOLExcel.exe` and follow the IOL sign-in flow.
