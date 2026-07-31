@@ -15,11 +15,13 @@ const {
   buildPresetMenuChoices,
   resolvePresetMenuSelection,
   enableImmediateNavigationSubmit,
+  enablePresetSelectAllBehavior,
   UPDATE_SYMBOL_LIST_CHOICE,
   BACK_CHOICE,
   TODOS_CHOICE,
   CUSTOM_CHOICE,
   CHANGE_OUTPUT_CHOICE,
+  LOGIN_CHOICE,
   LOGOUT_CHOICE,
   EXIT_CHOICE,
   MAIN_MENU_CHOICE
@@ -38,11 +40,26 @@ test("promptForStartupAction exposes all executable menu actions", async () => {
   assert.deepEqual(receivedOptions.choices.map((choice) => choice.name), [
     "start",
     CHANGE_OUTPUT_CHOICE,
-    LOGOUT_CHOICE,
+    LOGIN_CHOICE,
     "uninstall",
     EXIT_CHOICE
   ]);
   assert.equal(receivedOptions.choicesHeader, " ");
+  assert.equal(receivedOptions.choices[2].message, "Iniciar sesión de IOL");
+});
+
+test("promptForStartupAction shows logout only when an IOL session is saved", async () => {
+  let receivedOptions;
+  await promptForStartupAction({
+    hasSavedSession: true,
+    selectPrompt: (options) => {
+      receivedOptions = options;
+      return { run: async () => LOGOUT_CHOICE };
+    }
+  });
+
+  assert.equal(receivedOptions.choices[2].name, LOGOUT_CHOICE);
+  assert.equal(receivedOptions.choices[2].message, "Cerrar sesión de IOL");
 });
 
 test("promptForOutputDirectory shows the current folder and resolves a custom selection", async () => {
@@ -63,7 +80,7 @@ test("promptForOutputFormat requires one space-selected format before Enter cont
   const result = await promptForOutputFormat({
     multiSelectPrompt: (options) => {
       receivedOptions = options;
-      return { run: async () => ["xlsx"] };
+      return { submit: async () => {}, run: async () => ["xlsx"] };
     }
   });
 
@@ -406,20 +423,51 @@ test("resolvePresetMenuSelection gives exit and main-menu actions priority over 
   assert.deepEqual(resolvePresetMenuSelection(["acciones", EXIT_CHOICE], ["acciones", "cedears"]), { mode: "exit" });
 });
 
-test("level-two navigation actions execute with Enter without a prior checkbox selection", async () => {
+test("immediate navigation actions execute with Enter without a checkbox", async () => {
   const focused = { name: MAIN_MENU_CHOICE, enabled: false };
-  let originalSubmitCalled = false;
+  let selectionAtSubmit;
   const prompt = {
     focused,
+    get selected() {
+      return [];
+    },
     submit: async () => {
-      originalSubmitCalled = true;
+      selectionAtSubmit = prompt.selected;
     }
   };
 
   await enableImmediateNavigationSubmit(prompt).submit();
 
-  assert.equal(focused.enabled, true);
-  assert.equal(originalSubmitCalled, true);
+  assert.equal(focused.enabled, false);
+  assert.deepEqual(selectionAtSubmit, [focused]);
+});
+
+test("Todos selects all categories, and unmarking one category only unmarks Todos", async () => {
+  const choices = [
+    { name: TODOS_CHOICE, enabled: false },
+    { name: "acciones", enabled: false },
+    { name: "cedears", enabled: false },
+    { name: CUSTOM_CHOICE, enabled: false }
+  ];
+  const prompt = {
+    focused: choices[0],
+    find(name) {
+      return choices.find((choice) => choice.name === name);
+    },
+    alert: async () => {},
+    render: async () => {},
+    space: async function defaultSpace() {
+      this.focused.enabled = !this.focused.enabled;
+    }
+  };
+  enablePresetSelectAllBehavior(prompt, ["acciones", "cedears"]);
+
+  await prompt.space();
+  assert.deepEqual(choices.map((choice) => choice.enabled), [true, true, true, false]);
+
+  prompt.focused = choices[1];
+  await prompt.space();
+  assert.deepEqual(choices.map((choice) => choice.enabled), [false, false, true, false]);
 });
 
 test("resolvePresetMenuSelection expands Todos to every category, ignoring individual ticks", () => {
