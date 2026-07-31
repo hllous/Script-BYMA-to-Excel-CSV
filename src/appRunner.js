@@ -16,6 +16,7 @@ const {
   promptForPostRunAction,
   START_CHOICE,
   CHANGE_OUTPUT_CHOICE,
+  LOGIN_CHOICE,
   LOGOUT_CHOICE,
   UNINSTALL_CHOICE,
   EXIT_CHOICE,
@@ -362,9 +363,10 @@ async function runExecutableStartupMenu(runtimePaths, cliOptions) {
 
   for (;;) {
     printHomeBanner();
-    const startupAction = await promptForStartupAction();
+    const savedSettings = readUninstallSettings(runtimePaths.settingsPath);
+    const startupAction = await promptForStartupAction({ hasSavedSession: Boolean(savedSettings.username) });
 
-    if (startupAction === START_CHOICE) {
+    if (startupAction === START_CHOICE || startupAction === LOGIN_CHOICE) {
       console.clear();
       return true;
     }

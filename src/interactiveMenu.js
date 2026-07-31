@@ -8,19 +8,26 @@ const TODOS_CHOICE = "__todos__";
 const CUSTOM_CHOICE = "__custom__";
 const START_CHOICE = "start";
 const CHANGE_OUTPUT_CHOICE = "change-output";
+const LOGIN_CHOICE = "login";
 const LOGOUT_CHOICE = "logout";
 const UNINSTALL_CHOICE = "uninstall";
 const EXIT_CHOICE = "exit";
 const MAIN_MENU_CHOICE = "__main_menu__";
 
-async function promptForStartupAction({ selectPrompt = (options) => new Select(options) } = {}) {
+async function promptForStartupAction({
+  hasSavedSession = false,
+  selectPrompt = (options) => new Select(options)
+} = {}) {
+  const accountAction = hasSavedSession
+    ? { name: LOGOUT_CHOICE, message: "Cerrar sesión de IOL" }
+    : { name: LOGIN_CHOICE, message: "Iniciar sesión de IOL" };
   const prompt = selectPrompt({
     name: "startupAction",
     message: "¿Qué desea hacer?",
     choices: [
       { name: START_CHOICE, message: "Iniciar ScriptIOLExcel" },
       { name: CHANGE_OUTPUT_CHOICE, message: "Cambiar carpeta de salida" },
-      { name: LOGOUT_CHOICE, message: "Cerrar sesión de IOL" },
+      accountAction,
       { name: UNINSTALL_CHOICE, message: "Eliminar datos de la aplicación" },
       { name: EXIT_CHOICE, message: "Salir" }
     ],
@@ -62,7 +69,7 @@ async function promptForOutputFormat({
     message: "Formato de salida:",
     choices,
     maxSelected: 1,
-    footer: "\n( ↑↓ mover · ␣ seleccionar · ↵ continuar )",
+    footer: "\n( ↑↓ mover · ␣ seleccionar · ↵ continuar · ↵ en Volver regresar )",
     validate(value) {
       return value.length === 1 ? true : "Seleccioná un único formato antes de continuar.";
     },
@@ -72,7 +79,7 @@ async function promptForOutputFormat({
     }
   });
 
-  const selected = await prompt.run();
+  const selected = await enableImmediateNavigationSubmit(prompt, [BACK_CHOICE]).run();
   return selected[0];
 }
 
@@ -278,17 +285,60 @@ function resolvePresetMenuSelection(picked, categoryKeys) {
   return { mode: "categories", categories: picked };
 }
 
-function enableImmediateNavigationSubmit(prompt) {
+function enableImmediateNavigationSubmit(prompt, immediateChoiceNames = [MAIN_MENU_CHOICE, EXIT_CHOICE]) {
   const submit = prompt.submit.bind(prompt);
   prompt.submit = async function submitWithImmediateNavigation() {
-    // Category rows deliberately use a checkbox flow (Space, then Enter), but
-    // these two rows are commands. Mark the focused command just before the
-    // normal MultiSelect submit logic reads its selected choices, allowing
-    // Enter to execute it directly even when no checkbox was toggled.
-    if ([MAIN_MENU_CHOICE, EXIT_CHOICE].includes(this.focused && this.focused.name)) {
-      this.focused.enabled = true;
+    // Selection rows deliberately use a checkbox flow (Space, then Enter),
+    // while navigation rows are commands. Temporarily override the selected
+    // list passed to Enquirer's normal submit pipeline instead of enabling the
+    // focused row: Enter therefore executes the command immediately without
+    // ever rendering a checkmark beside it.
+    if (immediateChoiceNames.includes(this.focused && this.focused.name)) {
+      const ownSelectedDescriptor = Object.getOwnPropertyDescriptor(this, "selected");
+      Object.defineProperty(this, "selected", {
+        configurable: true,
+        get: () => [this.focused]
+      });
+      try {
+        return await submit();
+      } finally {
+        if (ownSelectedDescriptor) {
+          Object.defineProperty(this, "selected", ownSelectedDescriptor);
+        } else {
+          delete this.selected;
+        }
+      }
     }
     return submit();
+  };
+  return prompt;
+}
+
+function enablePresetSelectAllBehavior(prompt, categoryKeys) {
+  const space = prompt.space.bind(prompt);
+  prompt.space = async function togglePresetChoice() {
+    const focusedChoice = this.focused;
+    if (!focusedChoice) return this.alert();
+
+    if ([MAIN_MENU_CHOICE, EXIT_CHOICE].includes(focusedChoice.name)) {
+      return this.alert();
+    }
+
+    if (focusedChoice.name === TODOS_CHOICE) {
+      const shouldEnableCategories = !focusedChoice.enabled;
+      focusedChoice.enabled = shouldEnableCategories;
+      for (const categoryKey of categoryKeys) {
+        this.find(categoryKey).enabled = shouldEnableCategories;
+      }
+      return this.render();
+    }
+
+    const result = await space();
+    if (categoryKeys.includes(focusedChoice.name)) {
+      this.find(TODOS_CHOICE).enabled = categoryKeys.every((categoryKey) => this.find(categoryKey).enabled);
+      return this.render();
+    }
+    return result;
   };
   return prompt;
 }
@@ -324,7 +374,7 @@ async function promptForInstrumentPresetMenu({
     ...menuOverrides
   });
 
-  const picked = await enableImmediateNavigationSubmit(prompt).run();
+  const picked = await enableImmediateNavigationSubmit(enablePresetSelectAllBehavior(prompt, categoryKeys)).run();
   return resolvePresetMenuSelection(picked, categoryKeys);
 }
 
@@ -465,6 +515,7 @@ module.exports = {
   buildPresetMenuChoices,
   resolvePresetMenuSelection,
   enableImmediateNavigationSubmit,
+  enablePresetSelectAllBehavior,
   selectionToInitialNames,
   symbolChoiceName,
   UPDATE_SYMBOL_LIST_CHOICE,
@@ -473,6 +524,7 @@ module.exports = {
   CUSTOM_CHOICE,
   START_CHOICE,
   CHANGE_OUTPUT_CHOICE,
+  LOGIN_CHOICE,
   LOGOUT_CHOICE,
   UNINSTALL_CHOICE,
   EXIT_CHOICE,
