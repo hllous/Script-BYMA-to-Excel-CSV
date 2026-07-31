@@ -84,11 +84,10 @@ cp config.local.example.json config.local.json
 
 Para quienes prefieren no instalar Node.js: en la sección [Releases](https://github.com/hllous/Script-BYMA-to-Excel-CSV/releases/latest) del repositorio hay un ejecutable de Windows listo para usar.
 
-1. Descargar **`ScriptIOLExcel.exe`** y **`symbols.json`** de la última release
-2. Crear una carpeta y poner `ScriptIOLExcel.exe` ahí, junto con `symbols.json` dentro de una subcarpeta `data` (es decir, `data/symbols.json` al lado del `.exe`)
-3. Hacer doble clic en **`ScriptIOLExcel.exe`**
-4. Seguir los mismos pasos que en el Modo Fácil (seleccionar instrumentos, formato de salida, credenciales de IOL)
-5. Los archivos generados quedan en la carpeta **`output/`**, al lado del `.exe`
+1. Descargar **`ScriptIOLExcel.exe`** de la última release
+2. Hacer doble clic en el archivo descargado
+3. Seguir los mismos pasos que en el Modo Fácil (seleccionar instrumentos, formato de salida, credenciales de IOL)
+4. Los archivos generados quedan en la carpeta **`output/`**, al lado del `.exe`
 
 No hace falta instalar Node.js ni ejecutar `npm install` — el `.exe` ya incluye todo lo necesario.
 
@@ -228,11 +227,10 @@ cp config.local.example.json config.local.json
 
 If you'd rather not install Node.js at all, the [Releases](https://github.com/hllous/Script-BYMA-to-Excel-CSV/releases/latest) section of the repository has a ready-to-run Windows executable.
 
-1. Download **`ScriptIOLExcel.exe`** and **`symbols.json`** from the latest release
-2. Create a folder and put `ScriptIOLExcel.exe` there, along with `symbols.json` inside a `data` subfolder (i.e. `data/symbols.json` next to the `.exe`)
-3. Double-click **`ScriptIOLExcel.exe`**
-4. Follow the same steps as Easy Mode (pick instruments, output format, IOL credentials)
-5. The generated files land in the **`output/`** folder, next to the `.exe`
+1. Download **`ScriptIOLExcel.exe`** from the latest release
+2. Double-click the downloaded file
+3. Follow the same steps as Easy Mode (pick instruments, output format, IOL credentials)
+4. The generated files land in the **`output/`** folder, next to the `.exe`
 
 No Node.js install or `npm install` required — the `.exe` already bundles everything it needs.
 
