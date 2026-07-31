@@ -27,6 +27,7 @@
 - [Instalación](#-instalación)
 - [Configuración opcional](#️-configuración-opcional)
 - [Modo Fácil](#-modo-fácil)
+- [Distribuir como .exe](#-distribuir-como-exe-sin-instalar-nodejs)
 - [Modo Avanzado](#-modo-avanzado)
 - [Archivos de salida](#-archivos-de-salida)
 - [Notas y limitaciones](#-notas-y-limitaciones)
@@ -78,6 +79,22 @@ cp config.local.example.json config.local.json
 6. Ingresar el usuario y la contraseña de IOL cuando se soliciten
 7. Esperar a que finalice el proceso (tarda unos segundos, según la cantidad de instrumentos exportados)
 8. Abrir la carpeta **`output/`**, donde quedan los archivos CSV y/o Excel generados
+
+### 📦 Distribuir como .exe (sin instalar Node.js)
+
+Para compartir el programa con alguien que no tiene Node.js instalado, se puede generar un ejecutable de Windows standalone:
+
+```bash
+npm run build:exe
+```
+
+Esto genera `dist/ScriptIOLExcel.exe` y `dist/data/symbols.json`. **Compartir ambos archivos juntos, en la misma carpeta** (el `.exe` incluye Node.js y todas las dependencias empaquetadas, pero necesita el archivo de caché de símbolos al lado para poder arrancar). Quien lo reciba:
+
+1. Copia los dos archivos a una carpeta
+2. Hace doble clic en `ScriptIOLExcel.exe`
+3. Usa el menú interactivo normalmente — no necesita instalar Node.js, ni ejecutar `npm install`, ni tener conexión a internet salvo para autenticarse contra la API de IOL
+
+Las corridas crean su propia carpeta `output/` al lado del `.exe`, igual que con `run.bat`.
 
 ### 🔵 Modo Avanzado (línea de comandos)
 
@@ -158,6 +175,7 @@ Publicado bajo la [Licencia MIT](LICENSE).
 - [Installation](#-installation)
 - [Optional Configuration](#️-optional-configuration)
 - [Easy Mode](#-easy-mode)
+- [Distributing as an .exe](#-distributing-as-an-exe-no-nodejs-install-required)
 - [Advanced Mode](#-advanced-mode)
 - [Output Files](#-output-files)
 - [Notes & Limitations](#-notes--limitations)
@@ -209,6 +227,22 @@ cp config.local.example.json config.local.json
 6. Enter your IOL username and password when prompted
 7. Wait for the process to finish (a few seconds, depending on how many instruments are being exported)
 8. Open the **`output/`** folder, where the generated CSV and/or Excel files are saved
+
+### 📦 Distributing as an .exe (no Node.js install required)
+
+To share the program with someone who doesn't have Node.js installed, you can build a standalone Windows executable:
+
+```bash
+npm run build:exe
+```
+
+This produces `dist/ScriptIOLExcel.exe` and `dist/data/symbols.json`. **Share both files together, in the same folder** (the `.exe` bundles Node.js and every dependency, but it needs the symbol cache file next to it to start). Whoever receives it:
+
+1. Copies both files into a folder
+2. Double-clicks `ScriptIOLExcel.exe`
+3. Uses the interactive menu as usual — no Node.js install, no `npm install`, no internet access needed except to authenticate against the IOL API
+
+Runs create their own `output/` folder next to the `.exe`, same as with `run.bat`.
 
 ### 🔵 Advanced Mode (command line)
 

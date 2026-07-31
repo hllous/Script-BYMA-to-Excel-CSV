@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node src/appRunner.js",
     "help": "node src/appRunner.js --help",
-    "test": "node --test"
+    "test": "node --test",
+    "build:exe": "node scripts/build-exe.js"
   },
   "keywords": [
     "iol",
@@ -23,6 +24,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@yao-pkg/pkg": "^6.22.0",
     "nock": "^14.0.17"
   }
 }
