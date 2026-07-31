@@ -39,7 +39,6 @@ function parseArgs(argv) {
     concurrency: toPositiveIntegerOrNull(args.concurrency),
     timeoutMs: toPositiveIntegerOrNull(args.timeoutMs),
     retries: toPositiveIntegerOrNull(args.retries),
-    uninstall: args.uninstall === true,
     interactive: args.interactive === undefined ? null : !isFalsey(args.interactive)
   };
 }
@@ -126,7 +125,6 @@ function printHelp() {
   console.log("  --timeoutMs=<n>            Por defecto: 20000");
   console.log("  --retries=<n>              Por defecto: 3");
   console.log("  --interactive=true|false   Por defecto: true");
-  console.log("  --uninstall                 Elimina datos locales del ejecutable (con confirmación)");
   console.log("  --help                     Muestra esta ayuda");
 }
 

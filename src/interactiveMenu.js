@@ -6,6 +6,21 @@ const UPDATE_SYMBOL_LIST_CHOICE = "__update_symbol_list__";
 const BACK_CHOICE = "__back__";
 const TODOS_CHOICE = "__todos__";
 const CUSTOM_CHOICE = "__custom__";
+const START_CHOICE = "start";
+const UNINSTALL_CHOICE = "uninstall";
+
+async function promptForStartupAction({ selectPrompt = (options) => new Select(options) } = {}) {
+  const prompt = selectPrompt({
+    name: "startupAction",
+    message: "¿Qué desea hacer?",
+    choices: [
+      { name: START_CHOICE, message: "Iniciar ScriptIOLExcel" },
+      { name: UNINSTALL_CHOICE, message: "Eliminar datos de la aplicación" }
+    ],
+    footer: "\n( ↑↓ mover · ↵ confirmar )"
+  });
+  return prompt.run();
+}
 
 async function promptForOutputDirectory(currentOutputDir, { inputPrompt = (options) => new Input(options) } = {}) {
   const prompt = inputPrompt({
@@ -374,6 +389,7 @@ async function promptForSymbolSelectionWithReuse({
 }
 
 module.exports = {
+  promptForStartupAction,
   promptForOutputDirectory,
   promptForOutputFormat,
   promptForSymbolSelection,
@@ -392,5 +408,7 @@ module.exports = {
   UPDATE_SYMBOL_LIST_CHOICE,
   BACK_CHOICE,
   TODOS_CHOICE,
-  CUSTOM_CHOICE
+  CUSTOM_CHOICE,
+  START_CHOICE,
+  UNINSTALL_CHOICE
 };
