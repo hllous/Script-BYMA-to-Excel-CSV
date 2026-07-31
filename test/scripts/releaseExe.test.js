@@ -154,7 +154,7 @@ test("smokePackagedExecutable verifies help and packaged user-data initializatio
         return "Recolector BYMA con IOL API";
       }
 
-      fs.mkdirSync(path.join(options.env.LOCALAPPDATA, "ScriptIOLExcel", "output"), { recursive: true });
+      fs.mkdirSync(path.join(options.env.LOCALAPPDATA, "ScriptIOLExcel", "diagnostics"), { recursive: true });
       const error = new Error("missing credentials");
       error.stderr = "Error fatal: No hay credenciales de IOL";
       throw error;

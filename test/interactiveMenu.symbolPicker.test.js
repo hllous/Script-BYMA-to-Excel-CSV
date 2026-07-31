@@ -1,6 +1,8 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
+const path = require("node:path");
 const {
+  promptForOutputDirectory,
   buildSymbolPickerChoices,
   buildSymbolSelectionShape,
   selectionToInitialNames,
@@ -15,6 +17,19 @@ const {
   TODOS_CHOICE,
   CUSTOM_CHOICE
 } = require("../src/interactiveMenu");
+
+test("promptForOutputDirectory shows the current folder and resolves a custom selection", async () => {
+  let receivedOptions;
+  const chosen = await promptForOutputDirectory("output", {
+    inputPrompt: (options) => {
+      receivedOptions = options;
+      return { run: async () => "exports/custom" };
+    }
+  });
+
+  assert.equal(receivedOptions.initial, "output");
+  assert.equal(chosen, path.resolve("exports/custom"));
+});
 
 const CACHE = {
   categories: {

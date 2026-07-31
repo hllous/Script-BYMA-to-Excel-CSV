@@ -11,9 +11,11 @@ class UserSettingsService {
   }
 
   saveUsername(username) {
-    const settings = this.readSettings();
-    fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
-    fs.writeFileSync(this.filePath, `${JSON.stringify({ ...settings, username }, null, 2)}\n`, "utf8");
+    this.writeSettings({ ...this.readSettings(), username });
+  }
+
+  saveOutputDirectory(outputDirectory) {
+    this.writeSettings({ ...this.readSettings(), salida: outputDirectory });
   }
 
   readSettings() {
@@ -23,6 +25,11 @@ class UserSettingsService {
 
     const raw = fs.readFileSync(this.filePath, "utf8").trim();
     return raw ? JSON.parse(raw) : {};
+  }
+
+  writeSettings(settings) {
+    fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
+    fs.writeFileSync(this.filePath, `${JSON.stringify(settings, null, 2)}\n`, "utf8");
   }
 }
 

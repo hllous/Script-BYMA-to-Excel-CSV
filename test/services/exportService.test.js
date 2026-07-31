@@ -95,11 +95,13 @@ test("exportData writes an XLSX workbook with a Resumen sheet plus one sheet per
 
 test("exportAudit writes pretty-printed JSON matching the given object", () => {
   const outputDir = makeOutputDir();
-  const service = new ExportService({ outputDir, logger: makeLogger() });
+  const diagnosticsDir = path.join(outputDir, "..", "diagnostics");
+  const service = new ExportService({ outputDir, diagnosticsDir, logger: makeLogger() });
 
   const auditPath = service.exportAudit({ runId: "run-6", totalRegistros: 3 }, "run-6");
 
-  assert.equal(auditPath, path.join(outputDir, "run-6-audit.json"));
+  assert.equal(auditPath, path.join(diagnosticsDir, "run-6-audit.json"));
+  assert.ok(!fs.existsSync(path.join(outputDir, "run-6-audit.json")));
   const parsed = JSON.parse(fs.readFileSync(auditPath, "utf8"));
   assert.deepEqual(parsed, { runId: "run-6", totalRegistros: 3 });
 });
@@ -111,4 +113,15 @@ test("constructor creates the output directory if it does not exist", () => {
   new ExportService({ outputDir, logger: makeLogger() });
 
   assert.ok(fs.existsSync(outputDir));
+});
+
+test("constructor creates the diagnostics directory separately from data exports", () => {
+  const parent = makeOutputDir();
+  const outputDir = path.join(parent, "exports");
+  const diagnosticsDir = path.join(parent, "diagnostics");
+
+  new ExportService({ outputDir, diagnosticsDir, logger: makeLogger() });
+
+  assert.ok(fs.existsSync(outputDir));
+  assert.ok(fs.existsSync(diagnosticsDir));
 });

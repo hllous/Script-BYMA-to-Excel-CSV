@@ -4,5 +4,6 @@ output/*.csv
 output/*.xlsx
 output/*.json
 output/*.log
+diagnostics/
 config.local.json
 .last-selection.json

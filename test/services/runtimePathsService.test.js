@@ -17,6 +17,7 @@ test("packaged runs store mutable state under LocalAppData instead of the workin
   assert.equal(paths.symbolCachePath, path.join(root, "data", "symbols.json"));
   assert.equal(paths.lastSelectionPath, path.join(root, "last-selection.json"));
   assert.equal(paths.outputDir, path.join(root, "output"));
+  assert.equal(paths.diagnosticsDir, path.join(root, "diagnostics"));
 });
 
 test("development runs retain repository-local config and output paths", () => {
@@ -31,4 +32,5 @@ test("development runs retain repository-local config and output paths", () => {
   assert.equal(paths.symbolCachePath, path.join("D:\\repos\\script-iol-excel", "data", "symbols.json"));
   assert.equal(paths.lastSelectionPath, path.join("D:\\repos\\script-iol-excel", ".last-selection.json"));
   assert.equal(paths.outputDir, path.join("D:\\repos\\script-iol-excel", "output"));
+  assert.equal(paths.diagnosticsDir, path.join("D:\\repos\\script-iol-excel", "diagnostics"));
 });

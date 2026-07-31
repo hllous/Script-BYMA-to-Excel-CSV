@@ -1,8 +1,15 @@
+const fs = require("node:fs");
 const path = require("node:path");
 const { parseArgs, printHelp } = require("./utils/argParser");
-const { promptForCredentials, promptToSaveToVault } = require("./utils/prompt");
+const {
+  promptForCredentials,
+  promptToSaveToVault,
+  promptToDeleteApplicationData,
+  promptToDeleteCustomOutputDirectory
+} = require("./utils/prompt");
 const {
   promptForOutputFormat,
+  promptForOutputDirectory,
   promptForSymbolSelectionWithReuse,
   promptForInstrumentSelection,
   promptForPostRunAction,
@@ -10,7 +17,7 @@ const {
 } = require("./interactiveMenu");
 const { loadLocalConfig } = require("./utils/configLoader");
 const { Logger } = require("./utils/logger");
-const { getDateInArgentina, formatDateInArgentina } = require("./utils/dateFormat");
+const { getDateInArgentina, formatDateInArgentina, formatFileTimestampInArgentina } = require("./utils/dateFormat");
 const { printHomeBanner } = require("./utils/banner");
 const { renderProgressBar } = require("./utils/progressBar");
 const { DEFAULTS, INSTRUMENT_DEFINITIONS } = require("./config/constants");
@@ -24,6 +31,7 @@ const { SymbolCacheService } = require("./services/symbolCacheService");
 const { LastSelectionService } = require("./services/lastSelectionService");
 const { RuntimePathsService } = require("./services/runtimePathsService");
 const { UserSettingsService } = require("./services/userSettingsService");
+const { uninstallExecutableData } = require("./services/uninstallService");
 
 async function main() {
   const cliOptions = parseArgs(process.argv);
@@ -33,13 +41,26 @@ async function main() {
   }
 
   const runtimePaths = new RuntimePathsService();
+  if (cliOptions.uninstall) {
+    const result = await uninstallExecutableData({
+      runtimePaths,
+      readSettings: () => readUninstallSettings(runtimePaths.settingsPath),
+      confirmAppDataDeletion: promptToDeleteApplicationData,
+      confirmCustomOutputDeletion: promptToDeleteCustomOutputDirectory
+    });
+    console.log(result.removedAppData ? "Datos locales eliminados." : "Desinstalación cancelada.");
+    if (result.removedCustomOutput) {
+      console.log("La carpeta de salida personalizada también fue eliminada.");
+    }
+    return;
+  }
   const localConfig = loadLocalConfig(runtimePaths.settingsPath);
   const options = mergeOptions(cliOptions, localConfig, { outputDir: runtimePaths.outputDir });
   const vaultService = new CredentialVaultService();
   const settingsService = runtimePaths.isPackaged
     ? new UserSettingsService({ filePath: runtimePaths.settingsPath })
-    : { saveUsername: () => {} };
-  const startupLogger = new Logger(path.join(runtimePaths.outputDir, "startup.log"));
+    : { saveUsername: () => {}, saveOutputDirectory: () => {} };
+  const startupLogger = new Logger(path.join(runtimePaths.diagnosticsDir, "startup.log"));
   const session = await authenticateBeforeSelection(options, {
     vaultService,
     settingsService,
@@ -49,6 +70,10 @@ async function main() {
   options.password = session.credentials.password;
 
   const useInteractiveMenu = shouldUseInteractiveMenu(options, cliOptions);
+  if (useInteractiveMenu) {
+    options.salida = await promptForOutputDirectory(options.salida);
+    settingsService.saveOutputDirectory(options.salida);
+  }
   const symbolCacheService = useInteractiveMenu
     ? new SymbolCacheService({
         authService: session.authService,
@@ -143,17 +168,23 @@ async function main() {
     const startedAtIso = startedAt.toISOString();
 
     const selectedDefinitions = instrumentTargets.map((target) => target.definition);
-    const runId = buildRunId(selectedDefinitions.map((item) => item.key), startedAtIso);
     const outputDir = path.resolve(options.salida || runtimePaths.outputDir);
-    const logger = new Logger(path.join(outputDir, `${runId}.log`));
+    const diagnosticsDir = runtimePaths.diagnosticsDir;
+    settingsService.saveOutputDirectory(outputDir);
+    const runId = buildAvailableRunId(buildRunId(selectedDefinitions.map((item) => item.key), startedAt), [
+      outputDir,
+      diagnosticsDir
+    ]);
+    const logger = new Logger(path.join(diagnosticsDir, `${runId}.log`));
 
+    console.log(`\nCarpeta de salida: ${outputDir}`);
     logger.info("Inicio de ejecución");
     logger.info(`Instrumentos solicitados: ${selectedDefinitions.map((item) => item.key).join(",")}`);
 
     setSessionLogger(session, logger);
     const { authService, iolHttpClient, discoveryService } = session;
     const aggregationService = new QuoteAggregationService({ iolHttpClient, logger });
-    const exportService = new ExportService({ outputDir, logger });
+    const exportService = new ExportService({ outputDir, diagnosticsDir, logger });
 
     await authService.getAccessToken();
 
@@ -239,7 +270,8 @@ async function main() {
 
     const auditPath = exportService.exportAudit(audit, runId);
 
-    logger.info(`Archivos generados: ${[...createdFiles, auditPath].join(" | ")}`);
+    logger.info(`Archivos exportados: ${createdFiles.join(" | ")}`);
+    logger.info(`Auditoría: ${auditPath}`);
     logger.info("Ejecución finalizada");
     logger.info(`Duración total: ${executionStats.durationText}`);
     logger.info(`Mercado: ${executionStats.market.label}`);
@@ -251,6 +283,12 @@ async function main() {
     console.log(`Mercado: ${executionStats.market.label}`);
     console.log(`\nRegistros exportados: ${allRows.length}`);
     console.log(`Fallos: ${allFailures.length}`);
+    console.log("\nArchivos exportados:");
+    for (const filePath of createdFiles) {
+      console.log(`  - ${filePath}`);
+    }
+    console.log(`\nLogs y auditoría: ${diagnosticsDir}`);
+    console.log(`  - ${auditPath}`);
 
     if (allFailures.length > 0) {
       console.log("Símbolos con error:");
@@ -406,13 +444,13 @@ function firstDefinedArray(...values) {
   return [];
 }
 
-function buildRunId(instrumentKeys, startedAtIso) {
+function buildRunId(instrumentKeys, startedAt) {
   const allKeys = INSTRUMENT_DEFINITIONS.map((item) => item.key);
   const sorted = [...new Set(instrumentKeys)].sort();
   const isAll = allKeys.length === sorted.length && allKeys.every((key) => sorted.includes(key));
   const instrumentToken = isAll ? "all" : sorted.join("-");
   const safeToken = instrumentToken.replace(/[^a-zA-Z0-9\-]/g, "-").slice(0, 80);
-  return `byma-${safeToken}-${startedAtIso.replace(/[:.]/g, "-")}`;
+  return `byma-${safeToken}-${formatFileTimestampInArgentina(startedAt)}`;
 }
 
 function applyCalculatedImplicitCcl(records) {
@@ -576,6 +614,30 @@ async function resolveCredentials(options, vaultService, { promptCredentials = p
   return candidate.credentials;
 }
 
+function readUninstallSettings(settingsPath) {
+  try {
+    return loadLocalConfig(settingsPath);
+  } catch {
+    // A malformed optional settings file must not prevent the user from
+    // removing the executable's complete local-data directory.
+    return {};
+  }
+}
+
+function buildAvailableRunId(baseRunId, directories) {
+  let candidate = baseRunId;
+  let suffix = 2;
+  while (directories.some((directory) => runArtifactsExist(directory, candidate))) {
+    candidate = `${baseRunId}-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
+}
+
+function runArtifactsExist(directory, runId) {
+  return [".csv", ".xlsx", "-audit.json", ".log"].some((suffix) => fs.existsSync(path.join(directory, `${runId}${suffix}`)));
+}
+
 async function resolveCredentialCandidate(options, vaultService, { promptCredentials = promptForCredentials, skipVault = false } = {}) {
   if (options.username && options.password) {
     return { credentials: { username: options.username, password: options.password }, source: "supplied" };
@@ -663,5 +725,7 @@ module.exports = {
   refreshSymbolCacheInteractively,
   shouldUseInteractiveMenu,
   formatTokenToFormatos,
-  buildInstrumentTargetsFromSelection
+  buildInstrumentTargetsFromSelection,
+  buildRunId,
+  buildAvailableRunId
 };
