@@ -140,6 +140,7 @@ async function main() {
         }
 
         if (selection.mainMenu) {
+          console.clear();
           return main();
         }
         if (selection.exit) {
@@ -313,9 +314,11 @@ async function main() {
         console.clear();
         keepRunning = true;
       } else if (postRunAction === "main-menu") {
+        console.clear();
         return main();
       } else if (postRunAction === LOGOUT_CHOICE) {
         await logOutAccount(vaultService, settingsService, options.username);
+        console.clear();
         return main();
       }
     }
@@ -372,7 +375,8 @@ async function runExecutableStartupMenu(runtimePaths, cliOptions) {
 
     if (startupAction === UNINSTALL_CHOICE) {
       await runUninstallFlow(runtimePaths);
-      return false;
+      console.clear();
+      continue;
     }
 
     if (startupAction === CHANGE_OUTPUT_CHOICE) {
@@ -386,6 +390,7 @@ async function runExecutableStartupMenu(runtimePaths, cliOptions) {
 
     if (startupAction === LOGOUT_CHOICE) {
       await logOutAccount(vaultService, settingsService, settingsService.getUsername());
+      console.clear();
       continue;
     }
   }
