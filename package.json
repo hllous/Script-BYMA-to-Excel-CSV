@@ -1,6 +1,6 @@
 {
   "name": "script-iol-excel",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "description": "Recolector BYMA con IOL API para exportar CSV/XLSX",
   "main": "src/appRunner.js",
   "scripts": {
