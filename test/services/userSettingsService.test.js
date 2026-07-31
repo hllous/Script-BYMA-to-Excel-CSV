@@ -51,3 +51,18 @@ test("clearCredentials removes saved login details without changing the output f
 
   assert.deepEqual(JSON.parse(fs.readFileSync(filePath, "utf8")), { salida: "C:\\Exports" });
 });
+
+test("saveUseDateFolders persists the output date-folder preference while preserving other settings", () => {
+  const filePath = makeSettingsPath();
+  fs.writeFileSync(filePath, JSON.stringify({ salida: "C:\\Exports" }), "utf8");
+  const service = new UserSettingsService({ filePath });
+
+  assert.equal(service.getUseDateFolders(), false);
+  service.saveUseDateFolders(true);
+
+  assert.equal(service.getUseDateFolders(), true);
+  assert.deepEqual(JSON.parse(fs.readFileSync(filePath, "utf8")), {
+    salida: "C:\\Exports",
+    carpetasPorFecha: true
+  });
+});

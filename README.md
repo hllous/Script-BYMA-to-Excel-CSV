@@ -24,11 +24,10 @@
 
 - [Características](#-características)
 - [Requisitos](#-requisitos)
-- [Instalación](#-instalación)
-- [Configuración opcional](#️-configuración-opcional)
-- [Modo Fácil](#-modo-fácil)
-- [Ejecutable standalone (.exe)](#-ejecutable-standalone-exe)
-- [Modo Avanzado](#-modo-avanzado)
+- [Ejecutable standalone (.exe) — recomendado](#-ejecutable-standalone-exe--recomendado)
+- [Para desarrollo](#-para-desarrollo)
+- [Modo Fácil (`run.bat`)](#-modo-fácil-runbat)
+- [Modo Avanzado (línea de comandos)](#-modo-avanzado-línea-de-comandos)
 - [Archivos de salida](#-archivos-de-salida)
 - [Notas y limitaciones](#-notas-y-limitaciones)
 - [Licencia](#-licencia)
@@ -46,12 +45,24 @@
 
 ### 📋 Requisitos
 
-- **Windows**, con **Node.js 18 o superior** instalado ([descargar acá](https://nodejs.org/))
+- **Windows**
 - Una cuenta de **IOL (InvertirOnline)** con credenciales válidas
 
-### 🛠 Instalación
+### 📦 Ejecutable standalone (.exe) — recomendado
 
-Este paso es necesario tanto para el Modo Fácil como para el Modo Avanzado.
+Para usar el programa, recomendamos el ejecutable: no requiere instalar Node.js ni ejecutar comandos.
+
+1. Descargar **`ScriptIOLExcel.exe`** de la última [release](https://github.com/hllous/Script-BYMA-to-Excel-CSV/releases/latest)
+2. Hacer doble clic en el archivo descargado. Windows puede mostrar una advertencia porque esta versión no tiene firma digital; verificar que se descargó desde este repositorio antes de continuar.
+3. En el menú inicial, elegir **Configuración** para cambiar la carpeta de salida, activar o desactivar las carpetas por fecha (`[ON/OFF]`) o eliminar los datos locales.
+4. En la primera ejecución, iniciar sesión en IOL; después seleccionar instrumentos, formato y nombre de salida. El selector de formatos usa **Espacio** para elegir uno y **Enter** para continuar.
+5. Por defecto, los CSV/XLSX se guardan en **`%LOCALAPPDATA%\ScriptIOLExcel\output\`** y los logs/auditorías en **`%LOCALAPPDATA%\ScriptIOLExcel\diagnostics\`**.
+
+El menú de instrumentos permite volver al menú principal o salir. Después de una exportación también se puede volver al selector, volver al menú principal, cerrar sesión o salir. Se pide confirmación antes de eliminar `%LOCALAPPDATA%\ScriptIOLExcel\`. Si se eligió otra carpeta de salida, se pregunta por separado si también se desea eliminarla.
+
+### 🛠 Para desarrollo
+
+Para desarrollar o ejecutar desde el repositorio se necesita **Node.js 18 o superior** ([descargar acá](https://nodejs.org/)).
 
 ```bash
 git clone https://github.com/hllous/Script-BYMA-to-Excel-CSV.git
@@ -59,7 +70,7 @@ cd Script-BYMA-to-Excel-CSV
 npm install
 ```
 
-### ⚙️ Configuración opcional
+#### ⚙️ Configuración opcional
 
 Para no ingresar el usuario de IOL en cada corrida, copiar `config.local.example.json` como `config.local.json` y completar el usuario y los valores por defecto:
 
@@ -69,33 +80,18 @@ cp config.local.example.json config.local.json
 
 `config.local.json` está en `.gitignore` y nunca se sube al repositorio. La contraseña **no** se guarda en este archivo: se pide una vez de forma enmascarada y, si se acepta, queda guardada en el almacén de credenciales de Windows para las próximas corridas.
 
-### 🟢 Modo Fácil (sin línea de comandos)
+#### 🟢 Modo Fácil (`run.bat`)
 
 1. Hacer doble clic en el archivo **`run.bat`**
 2. Ingresar y validar el usuario y la contraseña de IOL cuando se soliciten
 3. Confirmar o cambiar la carpeta de salida que se muestra antes del selector. La carpeta elegida queda guardada para la próxima ejecución.
-4. Si ya se usó el selector antes, va a preguntar si se desea reutilizar la última selección de instrumentos
+4. Si ya se usó el selector antes, elegir si se reutiliza, modifica o reemplaza la última selección de instrumentos
 5. Seleccionar instrumentos en el menú (marcar categorías enteras como "Acciones" o "Bonos", "Todos", o "Custom" para elegir símbolos específicos)
 6. Si se eligió "Custom", buscar y marcar símbolos puntuales en el selector buscable (hay una opción para actualizar la lista de símbolos desde IOL)
-7. Elegir el formato de salida (CSV + XLSX, solo CSV o solo XLSX)
+7. Elegir el formato de salida (CSV + XLSX, solo CSV o solo XLSX) y, si se desea, cambiar el nombre base del archivo. Un nombre existente se reemplaza.
 8. Esperar a que finalice el proceso (tarda unos segundos, según la cantidad de instrumentos exportados). Al finalizar se muestran las rutas exactas de todos los archivos generados.
 
-### 📦 Ejecutable standalone (.exe)
-
-Para quienes prefieren no instalar Node.js: en la sección [Releases](https://github.com/hllous/Script-BYMA-to-Excel-CSV/releases/latest) del repositorio hay un ejecutable de Windows listo para usar.
-
-1. Descargar **`ScriptIOLExcel.exe`** de la última release
-2. Comparar el SHA-256 del archivo con `SHA256SUMS.txt` publicado en la release
-3. Hacer doble clic en el archivo descargado. Windows puede mostrar una advertencia porque esta versión no tiene firma digital; verificar que se descargó desde este repositorio antes de continuar.
-4. En el menú inicial, elegir **Iniciar ScriptIOLExcel**, cambiar la carpeta de salida, cerrar la sesión guardada de IOL, eliminar los datos locales o salir.
-5. En la primera ejecución, iniciar sesión en IOL; después seleccionar instrumentos y formato de salida. El selector de formatos usa **Espacio** para elegir uno y **Enter** para continuar.
-6. Por defecto, los CSV/XLSX se guardan en **`%LOCALAPPDATA%\ScriptIOLExcel\output\`** y los logs/auditorías en **`%LOCALAPPDATA%\ScriptIOLExcel\diagnostics\`**.
-
-El menú de instrumentos permite volver al menú principal o salir. Después de una exportación también se puede volver al selector, volver al menú principal, cerrar sesión o salir. Se pide confirmación antes de eliminar `%LOCALAPPDATA%\ScriptIOLExcel\`. Si se eligió otra carpeta de salida, se pregunta por separado si también se desea eliminarla.
-
-No hace falta instalar Node.js ni ejecutar `npm install` — el `.exe` ya incluye todo lo necesario.
-
-### 🔵 Modo Avanzado (línea de comandos)
+#### 🔵 Modo Avanzado (línea de comandos)
 
 Para quienes prefieren trabajar desde la terminal y personalizar la exportación mediante parámetros.
 
@@ -147,10 +143,11 @@ diagnostics/
 └── byma-acciones-YYYY-MM-DD-HH-mm.log
 ```
 
+En el ejecutable, **Configuración → Guardar archivos en carpetas por fecha** organiza los CSV/XLSX en `output/YYYY-MM-DD/`. Al elegir un nombre base personalizado (sin extensión), se reemplaza el CSV y/o XLSX de igual nombre dentro de la carpeta de salida activa.
+
 ### 📝 Notas y limitaciones
 
 - El script continúa aunque haya errores en símbolos individuales — se registran en el log, no interrumpen la corrida.
-- Si un campo no aplica para un tipo de instrumento, se exporta como `null`.
 - Si IOL cambia sus endpoints o la estructura de respuesta, puede ser necesario ajustar los mapeos en `src/services`.
 - Es una **herramienta no oficial, de uso personal**, sin afiliación ni respaldo de IOL/InvertirOnline o BYMA. Su uso debe ajustarse a los términos de servicio de la API de IOL.
 
@@ -173,11 +170,10 @@ Publicado bajo la [Licencia MIT](LICENSE).
 
 - [Features](#-features)
 - [Requirements](#-requirements)
-- [Installation](#-installation)
-- [Optional Configuration](#️-optional-configuration)
-- [Easy Mode](#-easy-mode)
-- [Standalone .exe](#-standalone-exe)
-- [Advanced Mode](#-advanced-mode)
+- [Standalone .exe — recommended](#-standalone-exe--recommended)
+- [For developers](#-for-developers)
+- [Easy Mode (`run.bat`)](#-easy-mode-runbat)
+- [Advanced Mode (command line)](#-advanced-mode-command-line)
 - [Output Files](#-output-files)
 - [Notes & Limitations](#-notes--limitations)
 - [License](#-license)
@@ -195,12 +191,24 @@ Publicado bajo la [Licencia MIT](LICENSE).
 
 ### 📋 Requirements
 
-- **Windows**, with **Node.js 18 or higher** installed ([download here](https://nodejs.org/))
+- **Windows**
 - An **IOL (InvertirOnline)** account with valid credentials
 
-### 🛠 Installation
+### 📦 Standalone .exe — recommended
 
-This step is required for both Easy Mode and Advanced Mode.
+For using the program, we recommend the executable: it needs neither Node.js nor command-line setup.
+
+1. Download **`ScriptIOLExcel.exe`** from the latest [release](https://github.com/hllous/Script-BYMA-to-Excel-CSV/releases/latest)
+2. Double-click the downloaded file. Windows may show a warning because this version is not digitally signed; verify it came from this repository before continuing.
+3. From the startup menu, choose **Configuración** to change the output folder, toggle date folders (`[ON/OFF]`), or remove local data.
+4. On the first run, sign in to IOL; then choose instruments, an output format, and an output name. The format picker uses **Space** to select one option and **Enter** to continue.
+5. By default, CSV/XLSX files are saved under **`%LOCALAPPDATA%\ScriptIOLExcel\output\`**, while logs and audits are saved under **`%LOCALAPPDATA%\ScriptIOLExcel\diagnostics\`**.
+
+The instrument menu lets the user return to the startup menu or exit. After an export, users can also return to the picker, return to the startup menu, log out, or exit. Confirmation is required before removing `%LOCALAPPDATA%\ScriptIOLExcel\`. If a different output folder was chosen, it is asked separately whether that folder should also be deleted.
+
+### 🛠 For developers
+
+To develop or run from the repository, install **Node.js 18 or higher** ([download here](https://nodejs.org/)).
 
 ```bash
 git clone https://github.com/hllous/Script-BYMA-to-Excel-CSV.git
@@ -208,7 +216,7 @@ cd Script-BYMA-to-Excel-CSV
 npm install
 ```
 
-### ⚙️ Optional configuration
+#### ⚙️ Optional configuration
 
 To avoid entering your IOL username on every run, copy `config.local.example.json` to `config.local.json` and fill in your username and default values:
 
@@ -218,33 +226,18 @@ cp config.local.example.json config.local.json
 
 `config.local.json` is in `.gitignore` and is never committed to the repo. Your password is **not** stored in this file: it's requested once with masked input, and if you opt in, it's saved to the Windows credential store for future runs.
 
-### 🟢 Easy Mode (no command line)
+#### 🟢 Easy Mode (`run.bat`)
 
 1. Double-click the **`run.bat`** file
 2. Enter and validate your IOL username and password when prompted
 3. Confirm or change the output folder shown before the picker. The chosen folder is retained for the next run.
-4. If you've used the picker before, it'll ask whether you want to reuse your last selection
+4. If you've used the picker before, choose whether to reuse, edit, or replace the last selection
 5. Pick instruments from the menu (check whole categories like "Acciones" or "Bonos", "Todos", or "Custom" to pick specific tickers instead)
 6. If you picked "Custom", search and check specific tickers in the searchable picker (there's an option to refresh the symbol list from IOL)
-7. Pick the output format (CSV + XLSX, CSV only, or XLSX only)
+7. Pick the output format (CSV + XLSX, CSV only, or XLSX only) and optionally change the output base name. An existing name is replaced.
 8. Wait for the process to finish (a few seconds, depending on how many instruments are being exported). The exact path to every generated file is printed when it finishes.
 
-### 📦 Standalone .exe
-
-If you'd rather not install Node.js at all, the [Releases](https://github.com/hllous/Script-BYMA-to-Excel-CSV/releases/latest) section of the repository has a ready-to-run Windows executable.
-
-1. Download **`ScriptIOLExcel.exe`** from the latest release
-2. Compare the file's SHA-256 with the `SHA256SUMS.txt` published with the release
-3. Double-click the downloaded file. Windows may show a warning because this version is not digitally signed; verify it came from this repository before continuing.
-4. From the startup menu, choose **Iniciar ScriptIOLExcel**, change the output folder, log out the saved IOL account, remove local data, or exit.
-5. On the first run, sign in to IOL; then choose instruments and an output format. The format picker uses **Space** to select one option and **Enter** to continue.
-6. By default, CSV/XLSX files are saved under **`%LOCALAPPDATA%\ScriptIOLExcel\output\`**, while logs and audits are saved under **`%LOCALAPPDATA%\ScriptIOLExcel\diagnostics\`**.
-
-The instrument menu lets the user return to the startup menu or exit. After an export, users can also return to the picker, return to the startup menu, log out, or exit. Confirmation is required before removing `%LOCALAPPDATA%\ScriptIOLExcel\`. If a different output folder was chosen, it is asked separately whether that folder should also be deleted.
-
-No Node.js install or `npm install` required — the `.exe` already bundles everything it needs.
-
-### 🔵 Advanced Mode (command line)
+#### 🔵 Advanced Mode (command line)
 
 For anyone who prefers working from the command line and customizing the export with parameters.
 
@@ -296,10 +289,11 @@ diagnostics/
 └── byma-acciones-YYYY-MM-DD-HH-mm.log
 ```
 
+In the executable, **Configuración → Guardar archivos en carpetas por fecha** places CSV/XLSX files under `output/YYYY-MM-DD/`. A custom base name (without an extension) replaces an existing CSV and/or XLSX with that name in the active output folder.
+
 ### 📝 Notes & Limitations
 
 - The script keeps running even if individual symbols error out — failures are logged, not fatal.
-- Fields that don't apply to a given instrument type are exported as `null`.
 - If IOL changes its API endpoints or response structure, mappings in `src/services` may need updating.
 - This is an **unofficial, personal-use tool** and is not affiliated with or endorsed by IOL/InvertirOnline or BYMA. Use it in accordance with IOL's API terms of service.
 

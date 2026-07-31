@@ -10,12 +10,16 @@ const {
 const {
   promptForOutputFormat,
   promptForOutputDirectory,
+  promptForOutputFileName,
   promptForStartupAction,
+  promptForSettingsAction,
   promptForSymbolSelectionWithReuse,
   promptForInstrumentSelection,
   promptForPostRunAction,
   START_CHOICE,
+  SETTINGS_CHOICE,
   CHANGE_OUTPUT_CHOICE,
+  TOGGLE_DATE_FOLDERS_CHOICE,
   LOGIN_CHOICE,
   LOGOUT_CHOICE,
   UNINSTALL_CHOICE,
@@ -24,7 +28,12 @@ const {
 } = require("./interactiveMenu");
 const { loadLocalConfig } = require("./utils/configLoader");
 const { Logger } = require("./utils/logger");
-const { getDateInArgentina, formatDateInArgentina, formatFileTimestampInArgentina } = require("./utils/dateFormat");
+const {
+  getDateInArgentina,
+  formatDateInArgentina,
+  formatFileTimestampInArgentina,
+  formatDateFolderInArgentina
+} = require("./utils/dateFormat");
 const { printHomeBanner } = require("./utils/banner");
 const { renderProgressBar } = require("./utils/progressBar");
 const { DEFAULTS, INSTRUMENT_DEFINITIONS } = require("./config/constants");
@@ -59,7 +68,12 @@ async function main() {
   const vaultService = new CredentialVaultService();
   const settingsService = runtimePaths.isPackaged
     ? new UserSettingsService({ filePath: runtimePaths.settingsPath })
-    : { saveUsername: () => {}, saveOutputDirectory: () => {}, clearCredentials: () => {} };
+    : {
+        saveUsername: () => {},
+        saveOutputDirectory: () => {},
+        saveUseDateFolders: () => {},
+        clearCredentials: () => {}
+      };
   const startupLogger = new Logger(path.join(runtimePaths.diagnosticsDir, "startup.log"));
   const session = await authenticateBeforeSelection(options, {
     vaultService,
@@ -100,6 +114,7 @@ async function main() {
     keepRunning = false;
 
     let instrumentTargets;
+    let outputFileName = null;
 
     if (useInteractiveMenu) {
       printHomeBanner();
@@ -162,6 +177,10 @@ async function main() {
       const finalCache = symbolCacheService.readCache();
       instrumentTargets = buildInstrumentTargetsFromSelection(selection, finalCache);
 
+      outputFileName = await promptForOutputFileName(
+        buildRunId(instrumentTargets.map((target) => target.definition.key), new Date())
+      );
+
       console.clear();
     } else {
       const selectedDefinitions = INSTRUMENT_DEFINITIONS.filter((definition) =>
@@ -182,13 +201,14 @@ async function main() {
     const startedAtIso = startedAt.toISOString();
 
     const selectedDefinitions = instrumentTargets.map((target) => target.definition);
-    const outputDir = path.resolve(options.salida || runtimePaths.outputDir);
+    const configuredOutputDir = path.resolve(options.salida || runtimePaths.outputDir);
+    const outputDir = resolveDataOutputDirectory(configuredOutputDir, options.carpetasPorFecha, startedAt);
     const diagnosticsDir = runtimePaths.diagnosticsDir;
-    settingsService.saveOutputDirectory(outputDir);
-    const runId = buildAvailableRunId(buildRunId(selectedDefinitions.map((item) => item.key), startedAt), [
-      outputDir,
-      diagnosticsDir
-    ]);
+    settingsService.saveOutputDirectory(configuredOutputDir);
+    const runId = buildAvailableRunId(
+      buildRunId(selectedDefinitions.map((item) => item.key), startedAt),
+      outputFileName ? [diagnosticsDir] : [outputDir, diagnosticsDir]
+    );
     const logger = new Logger(path.join(diagnosticsDir, `${runId}.log`));
 
     console.log(`\nCarpeta de salida: ${outputDir}`);
@@ -254,7 +274,7 @@ async function main() {
 
     applyCalculatedImplicitCcl(allRows);
 
-    const createdFiles = exportService.exportData(allRows, options.formatos, runId);
+    const createdFiles = exportService.exportData(allRows, options.formatos, outputFileName || runId);
 
     const endedAt = new Date();
     const executionStats = buildExecutionStats(startedAt, endedAt, selectedDefinitions.length, allRows.length, allFailures.length);
@@ -371,17 +391,8 @@ async function runExecutableStartupMenu(runtimePaths, cliOptions) {
       return false;
     }
 
-    if (startupAction === UNINSTALL_CHOICE) {
-      await runUninstallFlow(runtimePaths);
-      console.clear();
-      continue;
-    }
-
-    if (startupAction === CHANGE_OUTPUT_CHOICE) {
-      const savedSettings = readUninstallSettings(runtimePaths.settingsPath);
-      const savedOptions = mergeOptions(cliOptions, savedSettings, { outputDir: runtimePaths.outputDir });
-      const selectedOutputDir = await promptForOutputDirectory(savedOptions.salida);
-      settingsService.saveOutputDirectory(selectedOutputDir);
+    if (startupAction === SETTINGS_CHOICE) {
+      await runSettingsMenu(runtimePaths, cliOptions, settingsService);
       console.clear();
       continue;
     }
@@ -390,6 +401,39 @@ async function runExecutableStartupMenu(runtimePaths, cliOptions) {
       await logOutAccount(vaultService, settingsService, settingsService.getUsername());
       console.clear();
       continue;
+    }
+  }
+}
+
+async function runSettingsMenu(runtimePaths, cliOptions, settingsService) {
+  for (;;) {
+    const savedSettings = readUninstallSettings(runtimePaths.settingsPath);
+    const savedOptions = mergeOptions(cliOptions, savedSettings, { outputDir: runtimePaths.outputDir });
+    const action = await promptForSettingsAction({
+      outputDirectory: savedOptions.salida,
+      useDateFolders: savedOptions.carpetasPorFecha
+    });
+
+    if (action === BACK_CHOICE) {
+      return;
+    }
+
+    if (action === CHANGE_OUTPUT_CHOICE) {
+      const selectedOutputDir = await promptForOutputDirectory(savedOptions.salida);
+      settingsService.saveOutputDirectory(selectedOutputDir);
+      console.clear();
+      continue;
+    }
+
+    if (action === TOGGLE_DATE_FOLDERS_CHOICE) {
+      settingsService.saveUseDateFolders(!savedOptions.carpetasPorFecha);
+      console.clear();
+      continue;
+    }
+
+    if (action === UNINSTALL_CHOICE) {
+      await runUninstallFlow(runtimePaths);
+      return;
     }
   }
 }
@@ -505,6 +549,7 @@ function mergeOptions(cliOptions, localConfig, { outputDir = DEFAULTS.outputDir 
     panel: firstDefined(cliOptions.panel, config.panel, DEFAULTS.panel),
     formatos: firstDefinedArray(cliOptions.formatos, config.formatos, DEFAULTS.formatos),
     salida: firstDefined(cliOptions.salida, config.salida, outputDir),
+    carpetasPorFecha: firstDefined(config.carpetasPorFecha, false) === true,
     pageSize: firstDefined(cliOptions.pageSize, config.pageSize, DEFAULTS.pageSize),
     maxPages: firstDefined(cliOptions.maxPages, config.maxPages, DEFAULTS.maxPages),
     concurrency: firstDefined(cliOptions.concurrency, config.concurrency, DEFAULTS.concurrency),
@@ -703,6 +748,11 @@ async function resolveCredentials(options, vaultService, { promptCredentials = p
   return candidate.credentials;
 }
 
+function resolveDataOutputDirectory(baseOutputDir, useDateFolders, startedAt) {
+  const resolvedBaseDirectory = path.resolve(baseOutputDir);
+  return useDateFolders ? path.join(resolvedBaseDirectory, formatDateFolderInArgentina(startedAt)) : resolvedBaseDirectory;
+}
+
 function readUninstallSettings(settingsPath) {
   try {
     return loadLocalConfig(settingsPath);
@@ -816,5 +866,7 @@ module.exports = {
   formatTokenToFormatos,
   buildInstrumentTargetsFromSelection,
   buildRunId,
-  buildAvailableRunId
+  buildAvailableRunId,
+  resolveDataOutputDirectory,
+  mergeOptions
 };

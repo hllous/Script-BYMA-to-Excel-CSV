@@ -69,6 +69,18 @@ test("exportData only creates files for the requested formats", () => {
   assert.ok(!fs.existsSync(path.join(outputDir, "run-4.xlsx")));
 });
 
+test("exportData overwrites a previous export with the same base name", () => {
+  const outputDir = makeOutputDir();
+  const service = new ExportService({ outputDir, logger: makeLogger() });
+
+  service.exportData([{ instrumento: "acciones", simbolo: "GGAL" }], ["csv"], "cotizaciones");
+  service.exportData([{ instrumento: "acciones", simbolo: "YPFD" }], ["csv"], "cotizaciones");
+
+  const csv = fs.readFileSync(path.join(outputDir, "cotizaciones.csv"), "utf8");
+  assert.match(csv, /"YPFD"/);
+  assert.doesNotMatch(csv, /"GGAL"/);
+});
+
 test("exportData writes an XLSX workbook with a Resumen sheet plus one sheet per instrument", () => {
   const outputDir = makeOutputDir();
   const service = new ExportService({ outputDir, logger: makeLogger() });
