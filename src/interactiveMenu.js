@@ -7,7 +7,11 @@ const BACK_CHOICE = "__back__";
 const TODOS_CHOICE = "__todos__";
 const CUSTOM_CHOICE = "__custom__";
 const START_CHOICE = "start";
+const CHANGE_OUTPUT_CHOICE = "change-output";
+const LOGOUT_CHOICE = "logout";
 const UNINSTALL_CHOICE = "uninstall";
+const EXIT_CHOICE = "exit";
+const MAIN_MENU_CHOICE = "__main_menu__";
 
 async function promptForStartupAction({ selectPrompt = (options) => new Select(options) } = {}) {
   const prompt = selectPrompt({
@@ -15,7 +19,10 @@ async function promptForStartupAction({ selectPrompt = (options) => new Select(o
     message: "¿Qué desea hacer?",
     choices: [
       { name: START_CHOICE, message: "Iniciar ScriptIOLExcel" },
-      { name: UNINSTALL_CHOICE, message: "Eliminar datos de la aplicación" }
+      { name: CHANGE_OUTPUT_CHOICE, message: "Cambiar carpeta de salida" },
+      { name: LOGOUT_CHOICE, message: "Cerrar sesión de IOL" },
+      { name: UNINSTALL_CHOICE, message: "Eliminar datos de la aplicación" },
+      { name: EXIT_CHOICE, message: "Salir" }
     ],
     footer: "\n( ↑↓ mover · ↵ confirmar )"
   });
@@ -36,7 +43,10 @@ async function promptForOutputDirectory(currentOutputDir, { inputPrompt = (optio
   return path.resolve(String(selectedDirectory).trim());
 }
 
-async function promptForOutputFormat({ allowBack = false } = {}) {
+async function promptForOutputFormat({
+  allowBack = false,
+  multiSelectPrompt = (options) => new MultiSelect(options)
+} = {}) {
   const choices = [
     { name: "both", message: "CSV + XLSX" },
     { name: "csv", message: "Solo CSV" },
@@ -46,14 +56,23 @@ async function promptForOutputFormat({ allowBack = false } = {}) {
     choices.push({ name: BACK_CHOICE, message: "Volver a seleccionar instrumentos" });
   }
 
-  const prompt = new Select({
+  const prompt = multiSelectPrompt({
     name: "formato",
     message: "Formato de salida:",
     choices,
-    footer: "\n( ↑↓ mover · ↵ confirmar )"
+    maxSelected: 1,
+    footer: "\n( ↑↓ mover · ␣ seleccionar · ↵ continuar )",
+    validate(value) {
+      return value.length === 1 ? true : "Seleccioná un único formato antes de continuar.";
+    },
+    format() {
+      if (!this.state.submitted) return "";
+      return this.selected.map((choice) => this.styles.primary(choice.message)).join(", ");
+    }
   });
 
-  return prompt.run();
+  const selected = await prompt.run();
+  return selected[0];
 }
 
 function symbolChoiceName(categoryKey, simbolo) {
@@ -232,11 +251,21 @@ function buildPresetMenuChoices(cache) {
   return [
     { name: TODOS_CHOICE, message: "Todos" },
     ...categoryChoices,
-    { name: CUSTOM_CHOICE, message: "Custom (elegir símbolos específicos)" }
+    { name: CUSTOM_CHOICE, message: "Custom (elegir símbolos específicos)" },
+    { name: MAIN_MENU_CHOICE, message: "Volver al menú principal" },
+    { name: EXIT_CHOICE, message: "Salir" }
   ];
 }
 
 function resolvePresetMenuSelection(picked, categoryKeys) {
+  if (picked.includes(EXIT_CHOICE)) {
+    return { mode: "exit" };
+  }
+
+  if (picked.includes(MAIN_MENU_CHOICE)) {
+    return { mode: "main" };
+  }
+
   if (picked.includes(CUSTOM_CHOICE)) {
     return { mode: "custom" };
   }
@@ -252,7 +281,7 @@ async function promptForInstrumentPresetMenu({ cache, menuOverrides } = {}) {
   const choices = buildPresetMenuChoices(cache);
   const categoryKeys = choices
     .map((choice) => choice.name)
-    .filter((name) => name !== TODOS_CHOICE && name !== CUSTOM_CHOICE);
+    .filter((name) => ![TODOS_CHOICE, CUSTOM_CHOICE, MAIN_MENU_CHOICE, EXIT_CHOICE].includes(name));
 
   const prompt = new MultiSelect({
     name: "preset",
@@ -308,6 +337,14 @@ async function promptForInstrumentSelection({
   for (;;) {
     const menuResult = await presetMenu({ cache: currentCache, menuOverrides });
 
+    if (menuResult.mode === "main") {
+      return { mainMenu: true };
+    }
+
+    if (menuResult.mode === "exit") {
+      return { exit: true };
+    }
+
     if (menuResult.mode !== "custom") {
       return { categories: menuResult.categories, symbols: [] };
     }
@@ -346,7 +383,9 @@ async function promptForPostRunAction() {
     name: "postRun",
     message: "¿Qué quiere hacer ahora?",
     choices: [
-      { name: "menu", message: "Volver al menú" },
+      { name: "menu", message: "Volver a seleccionar instrumentos" },
+      { name: "main-menu", message: "Volver al menú principal" },
+      { name: LOGOUT_CHOICE, message: "Cerrar sesión de IOL" },
       { name: "quit", message: "Salir" }
     ],
     footer: "\n( ↑↓ mover · ↵ confirmar )"
@@ -384,7 +423,9 @@ async function promptForSymbolSelectionWithReuse({
   // Declining reuse discards the old selection entirely - the picker/menu always
   // starts blank here, it's never pre-checked with what was just declined.
   const selection = await selectSymbols({ cache, onUpdateSymbolList, promptOverrides, menuOverrides });
-  lastSelectionService.writeSelection(selection);
+  if (!selection.mainMenu && !selection.exit) {
+    lastSelectionService.writeSelection(selection);
+  }
   return selection;
 }
 
@@ -410,5 +451,9 @@ module.exports = {
   TODOS_CHOICE,
   CUSTOM_CHOICE,
   START_CHOICE,
-  UNINSTALL_CHOICE
+  CHANGE_OUTPUT_CHOICE,
+  LOGOUT_CHOICE,
+  UNINSTALL_CHOICE,
+  EXIT_CHOICE,
+  MAIN_MENU_CHOICE
 };

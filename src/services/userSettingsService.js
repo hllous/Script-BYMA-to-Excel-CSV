@@ -18,6 +18,13 @@ class UserSettingsService {
     this.writeSettings({ ...this.readSettings(), salida: outputDirectory });
   }
 
+  clearCredentials() {
+    const settings = this.readSettings();
+    delete settings.username;
+    delete settings.password;
+    this.writeSettings(settings);
+  }
+
   readSettings() {
     if (!fs.existsSync(this.filePath)) {
       return {};

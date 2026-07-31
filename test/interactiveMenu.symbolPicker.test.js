@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 const {
   promptForOutputDirectory,
+  promptForOutputFormat,
   promptForStartupAction,
   buildSymbolPickerChoices,
   buildSymbolSelectionShape,
@@ -16,10 +17,14 @@ const {
   UPDATE_SYMBOL_LIST_CHOICE,
   BACK_CHOICE,
   TODOS_CHOICE,
-  CUSTOM_CHOICE
+  CUSTOM_CHOICE,
+  CHANGE_OUTPUT_CHOICE,
+  LOGOUT_CHOICE,
+  EXIT_CHOICE,
+  MAIN_MENU_CHOICE
 } = require("../src/interactiveMenu");
 
-test("promptForStartupAction exposes a visible uninstall option", async () => {
+test("promptForStartupAction exposes all executable menu actions", async () => {
   let receivedOptions;
   const result = await promptForStartupAction({
     selectPrompt: (options) => {
@@ -29,7 +34,13 @@ test("promptForStartupAction exposes a visible uninstall option", async () => {
   });
 
   assert.equal(result, "uninstall");
-  assert.deepEqual(receivedOptions.choices.map((choice) => choice.name), ["start", "uninstall"]);
+  assert.deepEqual(receivedOptions.choices.map((choice) => choice.name), [
+    "start",
+    CHANGE_OUTPUT_CHOICE,
+    LOGOUT_CHOICE,
+    "uninstall",
+    EXIT_CHOICE
+  ]);
 });
 
 test("promptForOutputDirectory shows the current folder and resolves a custom selection", async () => {
@@ -43,6 +54,22 @@ test("promptForOutputDirectory shows the current folder and resolves a custom se
 
   assert.equal(receivedOptions.initial, "output");
   assert.equal(chosen, path.resolve("exports/custom"));
+});
+
+test("promptForOutputFormat requires one space-selected format before Enter continues", async () => {
+  let receivedOptions;
+  const result = await promptForOutputFormat({
+    multiSelectPrompt: (options) => {
+      receivedOptions = options;
+      return { run: async () => ["xlsx"] };
+    }
+  });
+
+  assert.equal(result, "xlsx");
+  assert.equal(receivedOptions.maxSelected, 1);
+  assert.match(receivedOptions.footer, /␣ seleccionar/);
+  assert.equal(receivedOptions.validate([]), "Seleccioná un único formato antes de continuar.");
+  assert.equal(receivedOptions.validate(["csv"]), true);
 });
 
 const CACHE = {
@@ -352,11 +379,11 @@ test("promptForSymbolSelectionWithReuse opens the picker/menu completely blank (
   assert.deepEqual(lastSelectionService.writes, [{ categories: [], symbols: [{ category: "cedears", simbolo: "AAPL" }] }]);
 });
 
-test("buildPresetMenuChoices lists Todos, one row per non-empty category, then Custom", () => {
+test("buildPresetMenuChoices lists categories and navigation choices", () => {
   const choices = buildPresetMenuChoices(CACHE);
   assert.deepEqual(
     choices.map((c) => c.name),
-    [TODOS_CHOICE, "acciones", "cedears", CUSTOM_CHOICE]
+    [TODOS_CHOICE, "acciones", "cedears", CUSTOM_CHOICE, MAIN_MENU_CHOICE, EXIT_CHOICE]
   );
 });
 
@@ -368,6 +395,13 @@ test("buildPresetMenuChoices omits categories with zero symbols", () => {
 test("resolvePresetMenuSelection routes to custom when Custom is ticked, ignoring any other ticks", () => {
   const result = resolvePresetMenuSelection(["acciones", CUSTOM_CHOICE], ["acciones", "cedears"]);
   assert.deepEqual(result, { mode: "custom" });
+});
+
+test("resolvePresetMenuSelection gives exit and main-menu actions priority over category picks", () => {
+  assert.deepEqual(resolvePresetMenuSelection(["acciones", MAIN_MENU_CHOICE], ["acciones", "cedears"]), {
+    mode: "main"
+  });
+  assert.deepEqual(resolvePresetMenuSelection(["acciones", EXIT_CHOICE], ["acciones", "cedears"]), { mode: "exit" });
 });
 
 test("resolvePresetMenuSelection expands Todos to every category, ignoring individual ticks", () => {
@@ -393,6 +427,20 @@ test("promptForInstrumentSelection always shows the preset menu first", async ()
 
   const result = await promptForInstrumentSelection({ cache: CACHE, presetMenu, customPicker });
   assert.deepEqual(result, { categories: ["acciones"], symbols: [] });
+});
+
+test("promptForInstrumentSelection returns navigation requests without treating them as instruments", async () => {
+  const mainResult = await promptForInstrumentSelection({
+    cache: CACHE,
+    presetMenu: async () => ({ mode: "main" })
+  });
+  const exitResult = await promptForInstrumentSelection({
+    cache: CACHE,
+    presetMenu: async () => ({ mode: "exit" })
+  });
+
+  assert.deepEqual(mainResult, { mainMenu: true });
+  assert.deepEqual(exitResult, { exit: true });
 });
 
 test("promptForInstrumentSelection opens the custom picker (allowBack) when the menu result is 'custom'", async () => {
