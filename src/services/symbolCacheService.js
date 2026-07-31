@@ -3,6 +3,10 @@ const path = require("node:path");
 const { INSTRUMENT_DEFINITIONS, DEFAULTS } = require("../config/constants");
 
 const DEFAULT_CACHE_PATH = path.join("data", "symbols.json");
+// Bundled into the packaged .exe as a pkg asset (see package.json's "pkg.assets"),
+// so a fresh install has a working symbol list without shipping a second file -
+// seeded out to real disk on first run, then updated normally from there on.
+const SEED_CACHE_PATH = path.join(__dirname, "..", "..", "data", "symbols.json");
 
 class SymbolCacheService {
   constructor({ authService, discoveryService, cachePath, logger }) {
@@ -54,9 +58,30 @@ class SymbolCacheService {
 
   readCache() {
     if (!fs.existsSync(this.cachePath)) {
+      this.seedCacheFromBundledCopy();
+    }
+    if (!fs.existsSync(this.cachePath)) {
       return null;
     }
     return JSON.parse(fs.readFileSync(this.cachePath, "utf8"));
+  }
+
+  seedCacheFromBundledCopy() {
+    // Only relevant inside the packaged .exe (pkg sets process.pkg) - a normal
+    // `node src/appRunner.js` checkout already has data/symbols.json at the
+    // default relative path, so this never needs to fire there.
+    if (!process.pkg) {
+      return;
+    }
+    try {
+      if (!fs.existsSync(SEED_CACHE_PATH)) {
+        return;
+      }
+      fs.mkdirSync(path.dirname(this.cachePath), { recursive: true });
+      fs.copyFileSync(SEED_CACHE_PATH, this.cachePath);
+    } catch {
+      // Best-effort: if the bundled seed can't be read/copied, readCache() falls through to null.
+    }
   }
 }
 

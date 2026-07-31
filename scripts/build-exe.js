@@ -14,11 +14,5 @@ execFileSync(
   { cwd: repoRoot, stdio: "inherit", shell: true }
 );
 
-fs.mkdirSync(path.join(distDir, "data"), { recursive: true });
-fs.copyFileSync(
-  path.join(repoRoot, "data", "symbols.json"),
-  path.join(distDir, "data", "symbols.json")
-);
-
 console.log(`\nListo: ${exePath}`);
-console.log("Para distribuir, compartir dist/ScriptIOLExcel.exe junto con dist/data/symbols.json (misma carpeta).");
+console.log("El ejecutable ya incluye la caché de símbolos - se puede distribuir solo.");
