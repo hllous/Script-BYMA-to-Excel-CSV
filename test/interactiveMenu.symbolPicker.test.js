@@ -151,6 +151,8 @@ test("buildSymbolPickerChoices omits categories with zero symbols", () => {
 test("buildSymbolPickerChoices adds a 'volver al menu' row before the update row when allowBack is true", () => {
   const choices = buildSymbolPickerChoices(CACHE, { allowBack: true });
   assert.deepEqual(choices.map((c) => c.name), ["acciones", "cedears", BACK_CHOICE, UPDATE_SYMBOL_LIST_CHOICE]);
+  assert.equal(choices.find((choice) => choice.name === BACK_CHOICE).indicator, "");
+  assert.equal(choices.find((choice) => choice.name === UPDATE_SYMBOL_LIST_CHOICE).indicator, "");
 });
 
 test("buildSymbolPickerChoices omits the 'volver al menu' row by default", () => {
@@ -463,6 +465,7 @@ test("immediate navigation actions execute with Enter without a checkbox", async
   let selectionAtSubmit;
   const prompt = {
     focused,
+    state: {},
     get selected() {
       return [];
     },
@@ -475,6 +478,7 @@ test("immediate navigation actions execute with Enter without a checkbox", async
 
   assert.equal(focused.enabled, false);
   assert.deepEqual(selectionAtSubmit, [focused]);
+  assert.equal(prompt.state.immediateNavigationChoice, MAIN_MENU_CHOICE);
 });
 
 test("Todos selects all categories, and unmarking one category only unmarks Todos", async () => {

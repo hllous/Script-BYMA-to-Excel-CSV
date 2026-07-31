@@ -105,9 +105,9 @@ function buildSymbolPickerChoices(cache, { allowBack = false } = {}) {
 
   const rows = [...categoryChoices];
   if (allowBack) {
-    rows.push({ name: BACK_CHOICE, message: "Volver al menú" });
+    rows.push({ name: BACK_CHOICE, message: "Volver al menú", indicator: "", pad: " " });
   }
-  rows.push({ name: UPDATE_SYMBOL_LIST_CHOICE, message: "Actualizar lista de símbolos desde IOL" });
+  rows.push({ name: UPDATE_SYMBOL_LIST_CHOICE, message: "Actualizar lista de símbolos desde IOL", indicator: "", pad: " " });
 
   return rows;
 }
@@ -222,7 +222,7 @@ async function promptForSymbolSelection({
     ...promptOverrides
   });
 
-  await prompt.run();
+  await enableImmediateNavigationSubmit(prompt, [BACK_CHOICE, UPDATE_SYMBOL_LIST_CHOICE]).run();
 
   // Read from state._choices (the full, unfiltered set enquirer accumulates),
   // not prompt.choices: while a search filter is active, prompt.choices is
@@ -230,12 +230,13 @@ async function promptForSymbolSelection({
   // outside the current filter if the user submits without clearing it.
   const topLevelChoices = prompt.state._choices.filter((choice) => !choice.parent);
   const shape = buildSymbolSelectionShape(topLevelChoices);
+  const immediateChoice = prompt.state.immediateNavigationChoice;
 
-  if (shape.backRequested) {
+  if (immediateChoice === BACK_CHOICE || shape.backRequested) {
     return { back: true };
   }
 
-  if (shape.updateRequested) {
+  if (immediateChoice === UPDATE_SYMBOL_LIST_CHOICE || shape.updateRequested) {
     if (typeof onUpdateSymbolList !== "function") {
       throw new Error("No se puede actualizar la lista de símbolos: falta onUpdateSymbolList");
     }
@@ -294,6 +295,9 @@ function enableImmediateNavigationSubmit(prompt, immediateChoiceNames = [MAIN_ME
     // focused row: Enter therefore executes the command immediately without
     // ever rendering a checkmark beside it.
     if (immediateChoiceNames.includes(this.focused && this.focused.name)) {
+      if (this.state) {
+        this.state.immediateNavigationChoice = this.focused.name;
+      }
       const ownSelectedDescriptor = Object.getOwnPropertyDescriptor(this, "selected");
       Object.defineProperty(this, "selected", {
         configurable: true,
