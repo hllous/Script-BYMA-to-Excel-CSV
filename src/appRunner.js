@@ -10,7 +10,7 @@ const {
 const {
   promptForOutputFormat,
   promptForOutputDirectory,
-  promptForOutputFileName,
+  promptForDefaultOutputFileName,
   promptForStartupAction,
   promptForSettingsAction,
   promptForSymbolSelectionWithReuse,
@@ -19,6 +19,7 @@ const {
   START_CHOICE,
   SETTINGS_CHOICE,
   CHANGE_OUTPUT_CHOICE,
+  CHANGE_OUTPUT_FILE_NAME_CHOICE,
   TOGGLE_DATE_FOLDERS_CHOICE,
   LOGIN_CHOICE,
   LOGOUT_CHOICE,
@@ -71,6 +72,7 @@ async function main() {
     : {
         saveUsername: () => {},
         saveOutputDirectory: () => {},
+        saveOutputFileName: () => {},
         saveUseDateFolders: () => {},
         clearCredentials: () => {}
       };
@@ -114,8 +116,6 @@ async function main() {
     keepRunning = false;
 
     let instrumentTargets;
-    let outputFileName = null;
-
     if (useInteractiveMenu) {
       printHomeBanner();
 
@@ -177,10 +177,6 @@ async function main() {
       const finalCache = symbolCacheService.readCache();
       instrumentTargets = buildInstrumentTargetsFromSelection(selection, finalCache);
 
-      outputFileName = await promptForOutputFileName(
-        buildRunId(instrumentTargets.map((target) => target.definition.key), new Date())
-      );
-
       console.clear();
     } else {
       const selectedDefinitions = INSTRUMENT_DEFINITIONS.filter((definition) =>
@@ -207,7 +203,7 @@ async function main() {
     settingsService.saveOutputDirectory(configuredOutputDir);
     const runId = buildAvailableRunId(
       buildRunId(selectedDefinitions.map((item) => item.key), startedAt),
-      outputFileName ? [diagnosticsDir] : [outputDir, diagnosticsDir]
+      options.nombreArchivoSalida ? [diagnosticsDir] : [outputDir, diagnosticsDir]
     );
     const logger = new Logger(path.join(diagnosticsDir, `${runId}.log`));
 
@@ -274,7 +270,7 @@ async function main() {
 
     applyCalculatedImplicitCcl(allRows);
 
-    const createdFiles = exportService.exportData(allRows, options.formatos, outputFileName || runId);
+    const createdFiles = exportService.exportData(allRows, options.formatos, options.nombreArchivoSalida || runId);
 
     const endedAt = new Date();
     const executionStats = buildExecutionStats(startedAt, endedAt, selectedDefinitions.length, allRows.length, allFailures.length);
@@ -411,6 +407,7 @@ async function runSettingsMenu(runtimePaths, cliOptions, settingsService) {
     const savedOptions = mergeOptions(cliOptions, savedSettings, { outputDir: runtimePaths.outputDir });
     const action = await promptForSettingsAction({
       outputDirectory: savedOptions.salida,
+      outputFileName: savedOptions.nombreArchivoSalida,
       useDateFolders: savedOptions.carpetasPorFecha
     });
 
@@ -421,6 +418,13 @@ async function runSettingsMenu(runtimePaths, cliOptions, settingsService) {
     if (action === CHANGE_OUTPUT_CHOICE) {
       const selectedOutputDir = await promptForOutputDirectory(savedOptions.salida);
       settingsService.saveOutputDirectory(selectedOutputDir);
+      console.clear();
+      continue;
+    }
+
+    if (action === CHANGE_OUTPUT_FILE_NAME_CHOICE) {
+      const selectedFileName = await promptForDefaultOutputFileName(savedOptions.nombreArchivoSalida);
+      settingsService.saveOutputFileName(selectedFileName);
       console.clear();
       continue;
     }
@@ -549,6 +553,7 @@ function mergeOptions(cliOptions, localConfig, { outputDir = DEFAULTS.outputDir 
     panel: firstDefined(cliOptions.panel, config.panel, DEFAULTS.panel),
     formatos: firstDefinedArray(cliOptions.formatos, config.formatos, DEFAULTS.formatos),
     salida: firstDefined(cliOptions.salida, config.salida, outputDir),
+    nombreArchivoSalida: firstDefined(config.nombreArchivoSalida, null),
     carpetasPorFecha: firstDefined(config.carpetasPorFecha, false) === true,
     pageSize: firstDefined(cliOptions.pageSize, config.pageSize, DEFAULTS.pageSize),
     maxPages: firstDefined(cliOptions.maxPages, config.maxPages, DEFAULTS.maxPages),

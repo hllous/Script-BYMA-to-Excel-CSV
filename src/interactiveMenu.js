@@ -9,6 +9,7 @@ const CUSTOM_CHOICE = "__custom__";
 const START_CHOICE = "start";
 const SETTINGS_CHOICE = "settings";
 const CHANGE_OUTPUT_CHOICE = "change-output";
+const CHANGE_OUTPUT_FILE_NAME_CHOICE = "change-output-file-name";
 const TOGGLE_DATE_FOLDERS_CHOICE = "toggle-date-folders";
 const LOGIN_CHOICE = "login";
 const LOGOUT_CHOICE = "logout";
@@ -40,6 +41,7 @@ async function promptForStartupAction({
 
 async function promptForSettingsAction({
   outputDirectory,
+  outputFileName = null,
   useDateFolders = false,
   selectPrompt = (options) => new Select(options)
 } = {}) {
@@ -48,6 +50,10 @@ async function promptForSettingsAction({
     message: "Configuración:",
     choices: [
       { name: CHANGE_OUTPUT_CHOICE, message: `Cambiar carpeta de salida (${outputDirectory})` },
+      {
+        name: CHANGE_OUTPUT_FILE_NAME_CHOICE,
+        message: `Cambiar nombre de archivo de salida (${outputFileName || "automático"})`
+      },
       {
         name: TOGGLE_DATE_FOLDERS_CHOICE,
         message: `Guardar archivos en carpetas por fecha [${useDateFolders ? "ON" : "OFF"}]`
@@ -107,15 +113,15 @@ async function promptForOutputFormat({
   return selected[0];
 }
 
-async function promptForOutputFileName(defaultFileName, { inputPrompt = (options) => new Input(options) } = {}) {
+async function promptForDefaultOutputFileName(currentFileName, { inputPrompt = (options) => new Input(options) } = {}) {
   const prompt = inputPrompt({
-    name: "outputFileName",
-    message: "Nombre del archivo de salida (sin extensión):",
-    initial: defaultFileName,
-    footer: "\n( ↵ mantener nombre · si existe, CSV/XLSX se reemplazarán )",
+    name: "defaultOutputFileName",
+    message: "Nombre predeterminado del archivo de salida (sin extensión):",
+    initial: currentFileName || "",
+    footer: "\n( ↵ vacío = nombre automático · si existe, CSV/XLSX se reemplazarán )",
     validate(value) {
       const name = String(value || "").trim();
-      if (!name) return "Ingresá un nombre de archivo.";
+      if (!name) return true;
       if (name === "." || name === ".." || /[\\\\/:*?\"<>|]/.test(name)) {
         return "Usá un nombre de archivo sin rutas ni caracteres no válidos.";
       }
@@ -123,7 +129,7 @@ async function promptForOutputFileName(defaultFileName, { inputPrompt = (options
       return true;
     }
   });
-  return String(await prompt.run()).trim();
+  return String(await prompt.run()).trim() || null;
 }
 
 function symbolChoiceName(categoryKey, simbolo) {
@@ -575,7 +581,7 @@ module.exports = {
   promptForSettingsAction,
   promptForOutputDirectory,
   promptForOutputFormat,
-  promptForOutputFileName,
+  promptForDefaultOutputFileName,
   promptForSymbolSelection,
   promptForSymbolSelectionWithReuse,
   promptForInstrumentSelection,
@@ -599,6 +605,7 @@ module.exports = {
   START_CHOICE,
   SETTINGS_CHOICE,
   CHANGE_OUTPUT_CHOICE,
+  CHANGE_OUTPUT_FILE_NAME_CHOICE,
   TOGGLE_DATE_FOLDERS_CHOICE,
   LOGIN_CHOICE,
   LOGOUT_CHOICE,

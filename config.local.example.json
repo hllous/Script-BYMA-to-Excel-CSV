@@ -7,6 +7,7 @@
   "formatos": ["csv", "xlsx"],
   "instrumentos": ["acciones", "cedears", "bonos"],
   "salida": "output",
+  "nombreArchivoSalida": null,
   "carpetasPorFecha": false,
   "pageSize": 100,
   "maxPages": 200,

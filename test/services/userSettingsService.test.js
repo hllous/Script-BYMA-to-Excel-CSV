@@ -66,3 +66,16 @@ test("saveUseDateFolders persists the output date-folder preference while preser
     carpetasPorFecha: true
   });
 });
+
+test("saveOutputFileName persists a custom output name and clears it when automatic naming is restored", () => {
+  const filePath = makeSettingsPath();
+  const service = new UserSettingsService({ filePath });
+
+  assert.equal(service.getOutputFileName(), null);
+  service.saveOutputFileName("cotizaciones");
+  assert.equal(service.getOutputFileName(), "cotizaciones");
+
+  service.saveOutputFileName(null);
+  assert.equal(service.getOutputFileName(), null);
+  assert.deepEqual(JSON.parse(fs.readFileSync(filePath, "utf8")), {});
+});

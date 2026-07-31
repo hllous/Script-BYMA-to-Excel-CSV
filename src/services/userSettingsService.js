@@ -26,6 +26,20 @@ class UserSettingsService {
     this.writeSettings({ ...this.readSettings(), carpetasPorFecha: enabled === true });
   }
 
+  getOutputFileName() {
+    return this.readSettings().nombreArchivoSalida || null;
+  }
+
+  saveOutputFileName(fileName) {
+    const settings = this.readSettings();
+    if (fileName) {
+      settings.nombreArchivoSalida = fileName;
+    } else {
+      delete settings.nombreArchivoSalida;
+    }
+    this.writeSettings(settings);
+  }
+
   clearCredentials() {
     const settings = this.readSettings();
     delete settings.username;

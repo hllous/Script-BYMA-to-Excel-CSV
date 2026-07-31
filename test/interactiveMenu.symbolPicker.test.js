@@ -4,7 +4,7 @@ const path = require("node:path");
 const {
   promptForOutputDirectory,
   promptForOutputFormat,
-  promptForOutputFileName,
+  promptForDefaultOutputFileName,
   promptForStartupAction,
   promptForSettingsAction,
   promptForPostRunAction,
@@ -25,6 +25,7 @@ const {
   CUSTOM_CHOICE,
   SETTINGS_CHOICE,
   CHANGE_OUTPUT_CHOICE,
+  CHANGE_OUTPUT_FILE_NAME_CHOICE,
   TOGGLE_DATE_FOLDERS_CHOICE,
   LOGIN_CHOICE,
   LOGOUT_CHOICE,
@@ -52,10 +53,11 @@ test("promptForStartupAction exposes the executable main menu with settings", as
   assert.equal(receivedOptions.choices[2].message, "Iniciar sesión de IOL");
 });
 
-test("promptForSettingsAction groups output and deletion controls, showing the date-folder state", async () => {
+test("promptForSettingsAction groups output controls and deletion, showing the date-folder state", async () => {
   let receivedOptions;
   const result = await promptForSettingsAction({
     outputDirectory: "C:\\Exports",
+    outputFileName: "cotizaciones",
     useDateFolders: true,
     selectPrompt: (options) => {
       receivedOptions = options;
@@ -66,11 +68,13 @@ test("promptForSettingsAction groups output and deletion controls, showing the d
   assert.equal(result, TOGGLE_DATE_FOLDERS_CHOICE);
   assert.deepEqual(receivedOptions.choices.map((choice) => choice.name), [
     CHANGE_OUTPUT_CHOICE,
+    CHANGE_OUTPUT_FILE_NAME_CHOICE,
     TOGGLE_DATE_FOLDERS_CHOICE,
     "uninstall",
     BACK_CHOICE
   ]);
-  assert.match(receivedOptions.choices[1].message, /\[ON\]/);
+  assert.match(receivedOptions.choices[1].message, /cotizaciones/);
+  assert.match(receivedOptions.choices[2].message, /\[ON\]/);
 });
 
 test("promptForStartupAction shows logout only when an IOL session is saved", async () => {
@@ -128,9 +132,9 @@ test("promptForOutputFormat requires one space-selected format before Enter cont
   assert.equal(receivedOptions.validate(["csv"]), true);
 });
 
-test("promptForOutputFileName keeps a custom base name and blocks paths or extensions", async () => {
+test("promptForDefaultOutputFileName saves a custom name, blocks paths/extensions, and accepts blank for automatic names", async () => {
   let receivedOptions;
-  const result = await promptForOutputFileName("byma-default", {
+  const result = await promptForDefaultOutputFileName("cotizaciones", {
     inputPrompt: (options) => {
       receivedOptions = options;
       return { run: async () => "cotizaciones-manana" };
@@ -138,10 +142,11 @@ test("promptForOutputFileName keeps a custom base name and blocks paths or exten
   });
 
   assert.equal(result, "cotizaciones-manana");
-  assert.equal(receivedOptions.initial, "byma-default");
+  assert.equal(receivedOptions.initial, "cotizaciones");
   assert.notEqual(receivedOptions.validate("subdir/file"), true);
   assert.notEqual(receivedOptions.validate("archivo.csv"), true);
   assert.equal(receivedOptions.validate("archivo-final"), true);
+  assert.equal(receivedOptions.validate(""), true);
 });
 
 test("output-format back action is rendered without a checkbox indicator", async () => {

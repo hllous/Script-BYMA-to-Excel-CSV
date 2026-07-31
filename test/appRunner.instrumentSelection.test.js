@@ -31,10 +31,19 @@ test("resolveDataOutputDirectory groups exports in an Argentina-local date folde
   assert.equal(resolveDataOutputDirectory("output", true, date), path.join(path.resolve("output"), "2026-07-31"));
 });
 
-test("mergeOptions reads the date-folder preference from settings and defaults it off", () => {
+test("mergeOptions reads output organization preferences from settings", () => {
   const cliOptions = { help: false };
-  assert.equal(mergeOptions(cliOptions, {}, { outputDir: "output" }).carpetasPorFecha, false);
-  assert.equal(mergeOptions(cliOptions, { carpetasPorFecha: true }, { outputDir: "output" }).carpetasPorFecha, true);
+  const defaults = mergeOptions(cliOptions, {}, { outputDir: "output" });
+  assert.equal(defaults.carpetasPorFecha, false);
+  assert.equal(defaults.nombreArchivoSalida, null);
+
+  const configured = mergeOptions(
+    cliOptions,
+    { carpetasPorFecha: true, nombreArchivoSalida: "cotizaciones" },
+    { outputDir: "output" }
+  );
+  assert.equal(configured.carpetasPorFecha, true);
+  assert.equal(configured.nombreArchivoSalida, "cotizaciones");
 });
 
 test("shouldUseInteractiveMenu is true when interactive and no CLI instrumentos/formato flags were given", () => {
