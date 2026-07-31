@@ -10,9 +10,11 @@ const {
 const {
   promptForOutputFormat,
   promptForOutputDirectory,
+  promptForStartupAction,
   promptForSymbolSelectionWithReuse,
   promptForInstrumentSelection,
   promptForPostRunAction,
+  UNINSTALL_CHOICE,
   BACK_CHOICE
 } = require("./interactiveMenu");
 const { loadLocalConfig } = require("./utils/configLoader");
@@ -41,18 +43,14 @@ async function main() {
   }
 
   const runtimePaths = new RuntimePathsService();
-  if (cliOptions.uninstall) {
-    const result = await uninstallExecutableData({
-      runtimePaths,
-      readSettings: () => readUninstallSettings(runtimePaths.settingsPath),
-      confirmAppDataDeletion: promptToDeleteApplicationData,
-      confirmCustomOutputDeletion: promptToDeleteCustomOutputDirectory
-    });
-    console.log(result.removedAppData ? "Datos locales eliminados." : "Desinstalación cancelada.");
-    if (result.removedCustomOutput) {
-      console.log("La carpeta de salida personalizada también fue eliminada.");
+  if (shouldShowExecutableStartupMenu(cliOptions, runtimePaths)) {
+    printHomeBanner();
+    const startupAction = await promptForStartupAction();
+    if (startupAction === UNINSTALL_CHOICE) {
+      await runUninstallFlow(runtimePaths);
+      return;
     }
-    return;
+    console.clear();
   }
   const localConfig = loadLocalConfig(runtimePaths.settingsPath);
   const options = mergeOptions(cliOptions, localConfig, { outputDir: runtimePaths.outputDir });
@@ -328,6 +326,28 @@ function buildIolServices(options, credentials, logger) {
   const discoveryService = new InstrumentDiscoveryService({ iolHttpClient, logger });
 
   return { authService, iolHttpClient, discoveryService };
+}
+
+function shouldShowExecutableStartupMenu(cliOptions, runtimePaths) {
+  return (
+    runtimePaths.isPackaged &&
+    cliOptions.interactive !== false &&
+    cliOptions.instrumentos === null &&
+    cliOptions.formatos === null
+  );
+}
+
+async function runUninstallFlow(runtimePaths) {
+  const result = await uninstallExecutableData({
+    runtimePaths,
+    readSettings: () => readUninstallSettings(runtimePaths.settingsPath),
+    confirmAppDataDeletion: promptToDeleteApplicationData,
+    confirmCustomOutputDeletion: promptToDeleteCustomOutputDirectory
+  });
+  console.log(result.removedAppData ? "Datos locales eliminados." : "Desinstalación cancelada.");
+  if (result.removedCustomOutput) {
+    console.log("La carpeta de salida personalizada también fue eliminada.");
+  }
 }
 
 function setSessionLogger(session, logger) {

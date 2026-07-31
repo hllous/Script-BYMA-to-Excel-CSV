@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const path = require("node:path");
 const {
   promptForOutputDirectory,
+  promptForStartupAction,
   buildSymbolPickerChoices,
   buildSymbolSelectionShape,
   selectionToInitialNames,
@@ -17,6 +18,19 @@ const {
   TODOS_CHOICE,
   CUSTOM_CHOICE
 } = require("../src/interactiveMenu");
+
+test("promptForStartupAction exposes a visible uninstall option", async () => {
+  let receivedOptions;
+  const result = await promptForStartupAction({
+    selectPrompt: (options) => {
+      receivedOptions = options;
+      return { run: async () => "uninstall" };
+    }
+  });
+
+  assert.equal(result, "uninstall");
+  assert.deepEqual(receivedOptions.choices.map((choice) => choice.name), ["start", "uninstall"]);
+});
 
 test("promptForOutputDirectory shows the current folder and resolves a custom selection", async () => {
   let receivedOptions;

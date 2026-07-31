@@ -91,13 +91,7 @@ Para quienes prefieren no instalar Node.js: en la sección [Releases](https://gi
 5. Antes de seleccionar instrumentos, confirmar o cambiar la carpeta de salida. La ruta se muestra nuevamente junto a cada archivo generado.
 6. Por defecto, los CSV/XLSX se guardan en **`%LOCALAPPDATA%\ScriptIOLExcel\output\`** y los logs/auditorías en **`%LOCALAPPDATA%\ScriptIOLExcel\diagnostics\`**.
 
-Para eliminar los datos locales del ejecutable, abrir PowerShell en la carpeta del `.exe` y ejecutar:
-
-```powershell
-.\ScriptIOLExcel.exe --uninstall
-```
-
-Se pide confirmación antes de eliminar `%LOCALAPPDATA%\ScriptIOLExcel\`. Si se eligió otra carpeta de salida, se pregunta por separado si también se desea eliminarla.
+Al abrir el ejecutable, el primer menú ofrece **"Eliminar datos de la aplicación"**. Se pide confirmación antes de eliminar `%LOCALAPPDATA%\ScriptIOLExcel\`. Si se eligió otra carpeta de salida, se pregunta por separado si también se desea eliminarla.
 
 No hace falta instalar Node.js ni ejecutar `npm install` — el `.exe` ya incluye todo lo necesario.
 
@@ -246,13 +240,7 @@ If you'd rather not install Node.js at all, the [Releases](https://github.com/hl
 5. Before choosing instruments, confirm or change the output folder. The path is shown again for every generated file.
 6. By default, CSV/XLSX files are saved under **`%LOCALAPPDATA%\ScriptIOLExcel\output\`**, while logs and audits are saved under **`%LOCALAPPDATA%\ScriptIOLExcel\diagnostics\`**.
 
-To remove the executable's local data, open PowerShell in the `.exe` folder and run:
-
-```powershell
-.\ScriptIOLExcel.exe --uninstall
-```
-
-It asks for confirmation before removing `%LOCALAPPDATA%\ScriptIOLExcel\`. If a different output folder was chosen, it asks separately whether that folder should also be deleted.
+When opening the executable, the first menu offers **"Eliminar datos de la aplicación"**. It asks for confirmation before removing `%LOCALAPPDATA%\ScriptIOLExcel\`. If a different output folder was chosen, it asks separately whether that folder should also be deleted.
 
 No Node.js install or `npm install` required — the `.exe` already bundles everything it needs.
 
